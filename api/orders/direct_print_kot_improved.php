@@ -1,9 +1,9 @@
 <?php
-// Direct Print KOT to Thermal Printer (Windows) - Improved with multiple methods
+// Improved Direct Print KOT to Thermal Printer (Windows)
 include '../cors.php';
 include '../database.php';
 
-// Function to send raw data to printer using multiple methods
+// Function to send raw data to printer
 function sendToPrinter($printer_name, $data) {
     if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
         return ['success' => false, 'message' => 'Only Windows is supported'];
@@ -41,7 +41,7 @@ function sendToPrinter($printer_name, $data) {
     }
 
     // Method 3: Try using copy command
-    $temp_file2 = sys_get_temp_dir() . '\\kot_copy_' . time() . '.txt';
+    $temp_file2 = sys_get_temp_dir() . '\\kot_' . time() . '_2.txt';
     file_put_contents($temp_file2, $data);
 
     $command2 = 'copy /B "' . $temp_file2 . '" "\\\\localhost\\' . $printer_name . '"';
@@ -58,9 +58,8 @@ function sendToPrinter($printer_name, $data) {
 
     return [
         'success' => false,
-        'message' => 'All printing methods failed. Check printer name and sharing settings.',
+        'message' => 'All printing methods failed',
         'debug' => [
-            'printer' => $printer_name,
             'method1' => 'Direct access failed',
             'method2' => ['command' => $command, 'return' => $return_var, 'output' => $output],
             'method3' => ['command' => $command2, 'return' => $return_var2, 'output' => $output2]
@@ -196,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Cut paper
     $escpos .= chr(29) . chr(86) . chr(1); // Full cut
 
-    // Send to printer using improved function
+    // Send to printer
     $print_result = sendToPrinter($thermal_printer_name, $escpos);
 
     if ($print_result['success']) {

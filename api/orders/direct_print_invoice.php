@@ -8,9 +8,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $order_id = $input['order_id'];
 
     // Get printer name from settings or use default
-    // You can update this with your exact default printer name
-    // Leave empty to use Windows default printer, or specify like "HP DeskJet 2700"
-    $printer_name = ""; // Empty = default printer, or set to specific printer name
+    // Invoice printer name
+    $printer_name = "XP-80C";
 
     // Get settings
     $settings_sql = "SELECT print_invoice, restaurant_name, address, mobile, email, tax_rate
@@ -275,36 +274,61 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $temp_file = sys_get_temp_dir() . '\\invoice_' . $order_id . '.html';
         file_put_contents($temp_file, $invoice_html);
 
-        // Print using Windows print command
-        if (empty($printer_name)) {
-            // Use default printer
-            $command = 'print "' . $temp_file . '"';
-        } else {
-            // Use specific printer
-            $command = 'print /D:"' . $printer_name . '" "' . $temp_file . '"';
+        $success = false;
+        $method = '';
+
+        // Method 1: Try using mshta.exe to print HTML (more reliable for HTML)
+        $command1 = 'mshta.exe "javascript:document.write(\'' . addslashes($invoice_html) . '\');document.execCommand(\'print\',false,null);window.close();"';
+        exec($command1 . ' 2>&1', $output1, $return_var1);
+
+        if ($return_var1 === 0) {
+            $success = true;
+            $method = 'mshta';
         }
 
-        exec($command, $output, $return_var);
+        // Method 2: Try Windows print command
+        if (!$success) {
+            $command2 = 'print /D:"' . $printer_name . '" "' . $temp_file . '"';
+            exec($command2 . ' 2>&1', $output2, $return_var2);
+
+            if ($return_var2 === 0) {
+                $success = true;
+                $method = 'print command';
+            }
+        }
+
+        // Method 3: Try using Internet Explorer for printing (fallback)
+        if (!$success) {
+            $command3 = 'start /min iexplore.exe -p "' . $temp_file . '"';
+            exec($command3 . ' 2>&1', $output3, $return_var3);
+
+            if ($return_var3 === 0) {
+                $success = true;
+                $method = 'internet explorer';
+            }
+        }
 
         // Clean up temp file after a delay (allow time for printing)
         sleep(2);
         if (file_exists($temp_file)) {
-            unlink($temp_file);
+            @unlink($temp_file);
         }
 
-        if ($return_var === 0) {
+        if ($success) {
             echo json_encode([
                 'success' => true,
-                'message' => 'Invoice sent to printer successfully'
+                'message' => 'Invoice sent to printer successfully',
+                'method' => $method
             ]);
         } else {
             echo json_encode([
                 'success' => false,
-                'message' => 'Failed to print invoice. Please check printer configuration.',
+                'message' => 'Failed to print invoice. All methods failed.',
                 'debug' => [
-                    'command' => $command,
-                    'return_code' => $return_var,
-                    'output' => $output
+                    'printer' => $printer_name,
+                    'method1' => ['return' => $return_var1 ?? null, 'output' => $output1 ?? []],
+                    'method2' => ['command' => $command2 ?? '', 'return' => $return_var2 ?? null, 'output' => $output2 ?? []],
+                    'method3' => ['return' => $return_var3 ?? null]
                 ]
             ]);
         }
