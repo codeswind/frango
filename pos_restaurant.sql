@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Sep 25, 2025 at 10:14 PM
+-- Generation Time: Oct 20, 2025 at 09:48 PM
 -- Server version: 8.0.31
 -- PHP Version: 8.2.4
 
@@ -194,7 +194,11 @@ INSERT INTO `orders` (`id`, `order_type`, `customer_id`, `table_id`, `external_o
 (27, 'Uber Eats', 23, NULL, '2522', 'Completed', 2547.96, '2025-09-23 06:35:56'),
 (28, 'Uber Eats', 23, NULL, '9666', 'Completed', 5028.97, '2025-09-23 06:41:23'),
 (29, 'Pickme Food', 24, NULL, '2555396', 'Completed', 5000.00, '2025-09-23 06:43:42'),
-(30, 'Take Away', 26, NULL, NULL, 'Hold', 8.99, '2025-09-25 05:49:17');
+(30, 'Take Away', 26, NULL, NULL, 'Hold', 8.99, '2025-09-25 05:49:17'),
+(31, 'Take Away', 1, NULL, NULL, 'Hold', 0.00, '2025-10-07 05:30:44'),
+(32, 'Take Away', 2, NULL, NULL, 'Hold', 27.98, '2025-10-07 05:46:09'),
+(33, 'Take Away', 1, NULL, NULL, 'Hold', 2521.98, '2025-10-20 10:08:09'),
+(34, 'Take Away', 1, NULL, NULL, 'Hold', 12.99, '2025-10-20 10:11:30');
 
 -- --------------------------------------------------------
 
@@ -273,7 +277,13 @@ INSERT INTO `order_items` (`id`, `order_id`, `menu_item_id`, `quantity`, `price_
 (69, 5, 3, 3, 18.99, 1, '2025-09-25 05:55:45'),
 (70, 5, 4, 2, 2.99, 1, '2025-09-25 05:55:45'),
 (71, 5, 5, 3, 6.99, 1, '2025-09-25 05:55:45'),
-(72, 30, 2, 1, 8.99, 1, '2025-09-25 05:55:45');
+(72, 30, 2, 1, 8.99, 1, '2025-09-25 05:55:45'),
+(73, 32, 2, 1, 8.99, 0, '2025-10-07 05:46:13'),
+(74, 32, 3, 1, 18.99, 0, '2025-10-07 05:46:13'),
+(75, 33, 2, 1, 8.99, 0, '2025-10-20 10:08:25'),
+(76, 33, 6, 1, 2500.00, 0, '2025-10-20 10:08:25'),
+(77, 33, 1, 1, 12.99, 0, '2025-10-20 10:08:25'),
+(78, 34, 1, 1, 12.99, 0, '2025-10-20 10:21:43');
 
 -- --------------------------------------------------------
 
@@ -341,7 +351,7 @@ CREATE TABLE `settings` (
 --
 
 INSERT INTO `settings` (`id`, `restaurant_name`, `address`, `mobile`, `email`, `tax_rate`, `print_kot`, `print_invoice`, `created_at`, `updated_at`) VALUES
-(1, 'Frango Crispy Fried', 'Kolonnawa Rd, Wellampitiya', '+94771414818', 'info@frangocf.com', 8.50, 1, 1, '2025-09-25 05:22:05', '2025-09-25 05:34:18');
+(1, 'Frango Crispy Fried', 'Kolonnawa Rd, Wellampitiya', '+94771414818', 'info@frangocf.com', 0.00, 1, 1, '2025-09-25 05:22:05', '2025-10-07 05:57:42');
 
 -- --------------------------------------------------------
 
@@ -499,13 +509,13 @@ ALTER TABLE `menu_items`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
 
 --
 -- AUTO_INCREMENT for table `payments`
