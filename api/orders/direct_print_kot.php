@@ -17,7 +17,7 @@ function printToThermal($printer_name, $data) {
     $command = 'copy /B "' . $temp_file . '" "\\\\localhost\\' . $printer_name . '"';
     exec($command . ' 2>&1', $output, $return_var);
 
-    sleep(1);
+    sleep(2); // Increased delay to ensure printer finishes before cutting
     if (file_exists($temp_file)) {
         @unlink($temp_file);
     }
@@ -33,7 +33,10 @@ function printToThermal($printer_name, $data) {
 
         if ($handle) {
             fwrite($handle, $data);
+            fflush($handle); // Flush the buffer to ensure all data is sent
+            usleep(500000); // Wait 500ms (0.5 seconds) for printer to receive all data
             fclose($handle);
+            sleep(1); // Additional delay to ensure cut command completes
             return ['success' => true, 'message' => 'Printed via direct file access', 'method' => 'direct'];
         }
     } catch (Exception $e) {
@@ -192,10 +195,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $escpos .= chr(27) . chr(33) . chr(8); // Bold
     $escpos .= "PREPARE IMMEDIATELY\n";
     $escpos .= chr(27) . chr(33) . chr(0); // Normal
-    $escpos .= "\n\n\n";
+    $escpos .= "\n\n\n\n\n\n"; // Extra blank lines to ensure all content prints before cut
 
-    // Cut paper
-    $escpos .= chr(29) . chr(86) . chr(1); // Full cut
+    // Cut paper - using partial cut instead of full cut
+    // This leaves a small connection so paper doesn't fall
+    $escpos .= chr(29) . chr(86) . chr(66) . chr(0); // Partial cut (ESC GS V 66 0)
+    // Alternative: Use chr(29) . chr(86) . chr(1) for full cut
+    // Or remove cut command completely for manual tear
 
     // Send to printer
     $print_result = printToThermal($thermal_printer_name, $escpos);
