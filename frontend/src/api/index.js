@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost/Afkar New/api';
+import { API_BASE_URL } from '../config';
+
+// API_BASE_URL is now imported from config.js
 
 const api = {
   // Auth

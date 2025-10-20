@@ -1,15 +1,13 @@
 <?php
-// Direct Print Invoice to Thermal Printer XP-80C (80mm)
 include '../cors.php';
+include '../config.php';
 include '../database.php';
 
-// Function to send raw data directly to printer (same as KOT)
 function printToThermal($printer_name, $data) {
     if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
         return ['success' => false, 'message' => 'Only Windows is supported'];
     }
 
-    // Method 1: Try using COPY command with /B flag
     $temp_file = sys_get_temp_dir() . '\\invoice_' . time() . '.prn';
     file_put_contents($temp_file, $data);
 
@@ -25,7 +23,6 @@ function printToThermal($printer_name, $data) {
         return ['success' => true, 'message' => 'Printed via copy command', 'method' => 'copy'];
     }
 
-    // Method 2: Try direct file write to printer share
     try {
         $printer_path = "\\\\localhost\\" . $printer_name;
         $handle = @fopen($printer_path, 'wb');
@@ -39,7 +36,6 @@ function printToThermal($printer_name, $data) {
             return ['success' => true, 'message' => 'Printed via direct file access', 'method' => 'direct'];
         }
     } catch (Exception $e) {
-        // Continue to next method
     }
 
     return [
@@ -56,10 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     $order_id = $input['order_id'];
 
-    // Invoice printer name
-    $invoice_printer_name = "XP-80C";
+    $invoice_printer_name = INVOICE_PRINTER;
 
-    // Get settings
     $settings_sql = "SELECT print_invoice, restaurant_name, address, mobile, email, tax_rate
                      FROM settings ORDER BY id DESC LIMIT 1";
     $settings_result = $conn->query($settings_sql);
@@ -73,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     }
 
-    // Get order details
     $order_sql = "SELECT o.*, c.name as customer_name, c.mobile as customer_mobile,
                          c.address as customer_address, t.table_name, p.payment_method
                   FROM orders o
@@ -93,7 +86,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $order = $order_result->fetch_assoc();
 
-    // Get order items
     $items_sql = "SELECT oi.*, mi.name as item_name
                   FROM order_items oi
                   JOIN menu_items mi ON oi.menu_item_id = mi.id
@@ -108,19 +100,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $subtotal += $row['quantity'] * $row['price_per_item'];
     }
 
-    // Calculate tax and total
     $tax_rate = floatval($settings['tax_rate']) / 100;
     $tax_amount = $subtotal * $tax_rate;
     $total_amount = $subtotal + $tax_amount;
 
-    // Generate ESC/POS commands for 80mm thermal printer (48 characters wide)
-    $escpos = chr(27) . chr(64); // Initialize printer
+    $escpos = chr(27) . chr(64);
 
-    // Header
-    $escpos .= chr(27) . chr(97) . chr(1); // Center align
-    $escpos .= chr(27) . chr(33) . chr(24); // Double width + height
+    $escpos .= chr(27) . chr(97) . chr(1);
+    $escpos .= chr(27) . chr(33) . chr(24);
     $escpos .= strtoupper($settings['restaurant_name']) . "\n";
-    $escpos .= chr(27) . chr(33) . chr(0); // Normal text
+    $escpos .= chr(27) . chr(33) . chr(0);
     $escpos .= $settings['address'] . "\n";
     $escpos .= "Tel: " . $settings['mobile'] . "\n";
     if ($settings['email']) {
@@ -128,15 +117,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
     $escpos .= str_repeat("=", 48) . "\n";
 
-    // Invoice title
-    $escpos .= chr(27) . chr(97) . chr(1); // Center align
-    $escpos .= chr(27) . chr(33) . chr(8); // Bold
+    $escpos .= chr(27) . chr(97) . chr(1);
+    $escpos .= chr(27) . chr(33) . chr(8);
     $escpos .= "INVOICE\n";
-    $escpos .= chr(27) . chr(33) . chr(0); // Normal
+    $escpos .= chr(27) . chr(33) . chr(0);
     $escpos .= str_repeat("=", 48) . "\n";
 
-    // Order info
-    $escpos .= chr(27) . chr(97) . chr(0); // Left align
+    $escpos .= chr(27) . chr(97) . chr(0);
     $escpos .= "Invoice #: INV-" . str_pad($order['id'], 5, '0', STR_PAD_LEFT) . "\n";
     $escpos .= "Date: " . date('d/m/Y H:i', strtotime($order['created_at'])) . "\n";
     $escpos .= "Type: " . $order['order_type'] . "\n";
@@ -156,23 +143,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $escpos .= str_repeat("-", 48) . "\n";
 
-    // Items header
-    $escpos .= chr(27) . chr(33) . chr(8); // Bold
-    $escpos .= sprintf("%-24s %4s %8s %10s\n", "Item", "Qty", "Price", "Total");
-    $escpos .= chr(27) . chr(33) . chr(0); // Normal
+    $escpos .= chr(27) . chr(33) . chr(8);
+    $escpos .= sprintf("%-20s %3s %10s %11s\n", "Item", "Qty", "Price", "Total");
+    $escpos .= chr(27) . chr(33) . chr(0);
     $escpos .= str_repeat("-", 48) . "\n";
 
-    // Items
     foreach ($items as $item) {
         $item_total = $item['quantity'] * $item['price_per_item'];
+        $item_name = substr($item['item_name'], 0, 20);
 
-        // Item name (truncate if too long)
-        $item_name = substr($item['item_name'], 0, 24);
-        $escpos .= sprintf("%-24s\n", $item_name);
-
-        // Quantity, price, total on next line
-        $escpos .= sprintf("%28s %4d %8.2f %10.2f\n",
-            "",
+        $escpos .= sprintf("%-20s %3d %10.2f %11.2f\n",
+            $item_name,
             $item['quantity'],
             $item['price_per_item'],
             $item_total
@@ -181,30 +162,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $escpos .= str_repeat("-", 48) . "\n";
 
-    // Totals
-    $escpos .= sprintf("%38s %10.2f\n", "Subtotal:", $subtotal);
-    $escpos .= sprintf("%38s %10.2f\n", "Tax (" . $settings['tax_rate'] . "%):", $tax_amount);
+    $escpos .= sprintf("%-34s %11.2f\n", "Subtotal:", $subtotal);
+    $escpos .= sprintf("%-34s %11.2f\n", "Tax (" . $settings['tax_rate'] . "%):", $tax_amount);
     $escpos .= str_repeat("=", 48) . "\n";
 
-    // Grand total - larger
-    $escpos .= chr(27) . chr(33) . chr(24); // Double size
-    $escpos .= chr(27) . chr(97) . chr(2); // Right align
-    $escpos .= "TOTAL: Rs." . number_format($total_amount, 2) . "\n";
-    $escpos .= chr(27) . chr(33) . chr(0); // Normal
-    $escpos .= chr(27) . chr(97) . chr(0); // Left align
+    $escpos .= chr(27) . chr(33) . chr(24);
+    $escpos .= sprintf("TOTAL: Rs.%8.2f\n", $total_amount);
+    $escpos .= chr(27) . chr(33) . chr(0);
     $escpos .= str_repeat("=", 48) . "\n";
 
-    // Footer
-    $escpos .= chr(27) . chr(97) . chr(1); // Center align
+    $escpos .= chr(27) . chr(97) . chr(1);
     $escpos .= "\n";
     $escpos .= "Thank you for your business!\n";
     $escpos .= "Please visit again\n";
-    $escpos .= "\n\n\n\n\n\n"; // Extra blank lines
+    $escpos .= "\n\n\n\n\n\n";
+    $escpos .= chr(29) . chr(86) . chr(66) . chr(0);
 
-    // Cut paper
-    $escpos .= chr(29) . chr(86) . chr(66) . chr(0); // Partial cut
-
-    // Send to printer
     $print_result = printToThermal($invoice_printer_name, $escpos);
 
     if ($print_result['success']) {

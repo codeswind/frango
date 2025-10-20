@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { API_BASE_URL } from '../config';
 import './CustomerManagement.css';
 
 const CustomerManagement = () => {
@@ -16,11 +17,10 @@ const CustomerManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     mobile: '',
-    address: '' // Optional field
+    address: ''
   });
 
-  // API base URL
-  const API_BASE = 'http://localhost/Afkar%20New/api/customers';
+  const API_BASE = `${API_BASE_URL}/customers`;
 
   // Fetch customers from API
   const fetchCustomers = async () => {
@@ -33,11 +33,9 @@ const CustomerManagement = () => {
         setCustomers(result.data || []);
         setFilteredCustomers(result.data || []);
       } else {
-        console.error('Failed to fetch customers:', result.message);
         alert('Failed to load customers. Please try again.');
       }
     } catch (error) {
-      console.error('Error fetching customers:', error);
       alert('Error loading customers. Please check your connection.');
     } finally {
       setLoading(false);
@@ -150,7 +148,6 @@ const CustomerManagement = () => {
         alert('Failed to add customer: ' + result.message);
       }
     } catch (error) {
-      console.error('Error adding customer:', error);
       alert('Error adding customer. Please try again.');
     }
   };
@@ -198,7 +195,6 @@ const CustomerManagement = () => {
         alert('Failed to update customer: ' + result.message);
       }
     } catch (error) {
-      console.error('Error updating customer:', error);
       alert('Error updating customer. Please try again.');
     }
   };

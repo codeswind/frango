@@ -64,7 +64,6 @@ const Expenses = () => {
         setExpenses(response.data);
       }
     } catch (fetchError) {
-      console.error('Error fetching expenses:', fetchError);
     }
   };
 
@@ -86,7 +85,6 @@ const Expenses = () => {
         alert('Error adding expense: ' + response.message);
       }
     } catch (addError) {
-      console.error('Error adding expense:', addError);
       alert('Error adding expense');
     }
   };
@@ -145,7 +143,6 @@ const Expenses = () => {
         alert('Error updating expense: ' + response.message);
       }
     } catch (updateError) {
-      console.error('Error updating expense:', updateError);
       alert('Error updating expense');
     }
   };

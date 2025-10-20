@@ -23,7 +23,6 @@ const Tables = () => {
         setTables(response.data);
       }
     } catch (error) {
-      console.error('Error fetching tables:', error);
     }
   };
 
@@ -40,7 +39,6 @@ const Tables = () => {
         alert('Error creating table: ' + response.message);
       }
     } catch (error) {
-      console.error('Error creating table:', error);
       alert('Error creating table');
     }
   };
@@ -62,7 +60,6 @@ const Tables = () => {
         alert('Error updating table: ' + response.message);
       }
     } catch (error) {
-      console.error('Error updating table:', error);
       alert('Error updating table');
     }
   };
@@ -73,7 +70,6 @@ const Tables = () => {
       const currentActiveNum = parseInt(currentActive);
       const newActive = currentActiveNum === 1 ? 0 : 1;
 
-      console.log(`Toggling table ${id}: current=${currentActive} (${currentActiveNum}) -> new=${newActive}`);
 
       const response = await api.toggleTableStatus(id, newActive);
 
@@ -84,7 +80,6 @@ const Tables = () => {
         alert('Error updating status: ' + response.message);
       }
     } catch (error) {
-      console.error('Error toggling status:', error);
       alert('Error updating status');
     }
   };
@@ -101,7 +96,6 @@ const Tables = () => {
           alert('Error deleting table: ' + response.message);
         }
       } catch (error) {
-        console.error('Error deleting table:', error);
         alert('Error deleting table');
       }
     }

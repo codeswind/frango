@@ -101,7 +101,6 @@ const OrderHistory = () => {
         setOrders(response.data);
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
     }
   };
 
@@ -135,7 +134,6 @@ const OrderHistory = () => {
         setShowOrderModal(true);
       }
     } catch (error) {
-      console.error('Error fetching order details:', error);
       alert('Error loading order details');
     }
   };
@@ -169,7 +167,6 @@ const OrderHistory = () => {
               document.body.removeChild(iframe);
             }, 1000);
           } catch (e) {
-            console.error('Print error:', e);
             document.body.removeChild(iframe);
           }
         };
@@ -177,7 +174,6 @@ const OrderHistory = () => {
         alert('Failed to generate invoice: ' + invoiceResponse.message);
       }
     } catch (error) {
-      console.error('Error printing invoice:', error);
       alert('Error generating invoice');
     }
   };

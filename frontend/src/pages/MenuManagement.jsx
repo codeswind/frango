@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { API_BASE_PATH } from '../config';
 import Modal from '../components/Modal';
 import api from '../api';
 import './MenuManagement.css';
@@ -38,7 +39,6 @@ const MenuManagement = () => {
         setPagination(response.pagination);
       }
     } catch (error) {
-      console.error('Error fetching menu items:', error);
     }
   }, [selectedCategory, currentPage, itemsPerPage]);
 
@@ -49,7 +49,6 @@ const MenuManagement = () => {
         setCategories(response.data);
       }
     } catch (error) {
-      console.error('Error fetching categories:', error);
     }
   };
 
@@ -103,7 +102,6 @@ const MenuManagement = () => {
         alert('Error adding menu item: ' + response.message);
       }
     } catch (error) {
-      console.error('Error adding menu item:', error);
       alert('Error adding menu item');
     }
   };
@@ -121,7 +119,6 @@ const MenuManagement = () => {
         alert('Error adding category: ' + response.message);
       }
     } catch (error) {
-      console.error('Error adding category:', error);
       alert('Error adding category');
     }
   };
@@ -135,7 +132,7 @@ const MenuManagement = () => {
       category_id: item.category_id,
       image_path: item.image_path || ''
     });
-    setImagePreview(item.image_path ? `http://localhost/Afkar New/${item.image_path}` : '');
+    setImagePreview(item.image_path ? `${API_BASE_PATH}/${item.image_path}` : '');
     setShowEditModal(true);
   };
 
@@ -169,7 +166,6 @@ const MenuManagement = () => {
         alert('Error updating menu item: ' + response.message);
       }
     } catch (error) {
-      console.error('Error updating menu item:', error);
       alert('Error updating menu item');
     }
   };
@@ -186,7 +182,6 @@ const MenuManagement = () => {
         alert('Error updating status: ' + response.message);
       }
     } catch (error) {
-      console.error('Error toggling status:', error);
       alert('Error updating status');
     }
   };
@@ -203,7 +198,6 @@ const MenuManagement = () => {
           alert('Error deleting item: ' + response.message);
         }
       } catch (error) {
-        console.error('Error deleting item:', error);
         alert('Error deleting item');
       }
     }
@@ -271,7 +265,7 @@ const MenuManagement = () => {
                 <td>
                   {item.image_path ? (
                     <img
-                      src={`http://localhost/Afkar New/${item.image_path}`}
+                      src={`${API_BASE_PATH}/${item.image_path}`}
                       alt={item.name}
                       className="menu-item-image"
                     />

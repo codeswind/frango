@@ -1,3 +1,4 @@
+import { API_BASE_URL, API_BASE_PATH } from '../config';
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../api';
 import './UserManagement.css';
@@ -19,8 +20,7 @@ const UserManagement = () => {
     role: ''
   });
 
-  // API base URL
-  const API_BASE = 'http://localhost/Afkar%20New/api/users';
+  const API_BASE = `${API_BASE_URL}/users`;
 
   useEffect(() => {
     fetchUsers();
@@ -35,7 +35,6 @@ const UserManagement = () => {
         setFilteredUsers(response.data);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
       alert('Error loading users. Please check your connection.');
     } finally {
       setLoading(false);
@@ -118,7 +117,6 @@ const UserManagement = () => {
           alert('Failed to delete user: ' + result.message);
         }
       } catch (error) {
-        console.error('Error deleting user:', error);
         alert('Error deleting user. Please try again.');
       }
     }
@@ -157,7 +155,6 @@ const UserManagement = () => {
         alert('Failed to update user: ' + result.message);
       }
     } catch (error) {
-      console.error('Error updating user:', error);
       alert('Error updating user. Please try again.');
     }
   };
@@ -194,7 +191,6 @@ const UserManagement = () => {
         alert('Failed to add user: ' + result.message);
       }
     } catch (error) {
-      console.error('Error adding user:', error);
       alert('Error adding user. Please try again.');
     }
   };

@@ -41,7 +41,6 @@ const Dashboard = () => {
         }));
       }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
     }
   };
 

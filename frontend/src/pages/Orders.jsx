@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { API_BASE_PATH } from '../config';
 import { useOrder } from '../context/OrderContext';
 import Modal from '../components/Modal';
 import api from '../api';
@@ -27,6 +28,7 @@ const Orders = () => {
   const [currentOrderId, setCurrentOrderId] = useState(null);
   const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+  const [isCompletingNewOrder, setIsCompletingNewOrder] = useState(false);
   const customerSearchTimeoutRef = useRef(null);
 
   const {
@@ -46,7 +48,6 @@ const Orders = () => {
         setMenuItems(response.data);
       }
     } catch (error) {
-      console.error('Error fetching menu items:', error);
     }
   }, [selectedCategory, searchTerm]);
 
@@ -79,7 +80,6 @@ const Orders = () => {
         setCategories(response.data);
       }
     } catch (error) {
-      console.error('Error fetching categories:', error);
     }
   };
 
@@ -90,7 +90,6 @@ const Orders = () => {
         setTables(response.data);
       }
     } catch (error) {
-      console.error('Error fetching tables:', error);
     }
   };
 
@@ -108,7 +107,6 @@ const Orders = () => {
         setCompletedOrders(completedResponse.data);
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
     }
   };
 
@@ -132,7 +130,6 @@ const Orders = () => {
       }
       // Don't clear the name if customer not found - let user type manually
     } catch (error) {
-      console.error('Error finding customer:', error);
     }
   }, []);
 
@@ -163,7 +160,6 @@ const Orders = () => {
 
   const handleDetailsSubmit = useCallback(async () => {
     try {
-      console.log('handleDetailsSubmit - selectedOrderType:', selectedOrderType);
       let customerId = null;
 
       if (['Dine In', 'Take Away', 'Delivery'].includes(selectedOrderType)) {
@@ -212,7 +208,6 @@ const Orders = () => {
         resetModalFields();
       }
     } catch (error) {
-      console.error('Error creating order:', error);
     }
   }, [selectedOrderType, customerName, customerMobile, deliveryAddress, externalOrderId, selectedTable, startNewOrder, resetModalFields]);
 
@@ -259,12 +254,9 @@ const Orders = () => {
       try {
         const kotResponse = await api.directPrintKOT(currentOrderId);
         if (kotResponse.success) {
-          console.log('KOT sent to thermal printer:', kotResponse.message);
         } else {
-          console.log('KOT printing message:', kotResponse.message);
         }
       } catch (error) {
-        console.error('Error printing KOT:', error);
       }
 
       alert('Order placed on hold');
@@ -277,7 +269,6 @@ const Orders = () => {
         fetchOrders();
       }
     } catch (error) {
-      console.error('Error holding order:', error);
     }
   };
 
@@ -299,6 +290,9 @@ const Orders = () => {
         items
       });
 
+      // Mark as completing a new order (should print both Invoice + KOT)
+      setIsCompletingNewOrder(true);
+
       // Set payment method based on order type
       if (orderDetails?.orderType === 'Uber Eats') {
         setPaymentMethod('Uber Eats');
@@ -310,7 +304,6 @@ const Orders = () => {
 
       setShowPaymentModal(true);
     } catch (error) {
-      console.error('Error preparing order:', error);
     }
   };
 
@@ -363,28 +356,24 @@ const Orders = () => {
         payment_method: paymentMethod
       });
 
-      // Print KOT to thermal printer (backend direct print)
-      try {
-        const kotResponse = await api.directPrintKOT(currentOrderId);
-        if (kotResponse.success) {
-          console.log('KOT sent to thermal printer:', kotResponse.message);
-        } else {
-          console.log('KOT printing message:', kotResponse.message);
+      // Print KOT only if completing a NEW order (not held order)
+      if (isCompletingNewOrder) {
+        try {
+          const kotResponse = await api.directPrintKOT(currentOrderId);
+          if (kotResponse.success) {
+          } else {
+          }
+        } catch (error) {
         }
-      } catch (error) {
-        console.error('Error printing KOT:', error);
       }
 
-      // Print Invoice to default printer (backend direct print)
+      // Always print invoice
       try {
         const invoiceResponse = await api.directPrintInvoice(currentOrderId);
         if (invoiceResponse.success) {
-          console.log('Invoice sent to printer:', invoiceResponse.message);
         } else {
-          console.log('Invoice printing failed:', invoiceResponse.message);
         }
       } catch (error) {
-        console.error('Error printing invoice:', error);
       }
 
       alert('Order completed successfully');
@@ -395,12 +384,12 @@ const Orders = () => {
       setShowPaymentModal(false);
       setSelectedOrderDetails(null);
       setPaymentMethod('Cash');
+      setIsCompletingNewOrder(false); // Reset flag
 
       if (activeTab === 'order-management') {
         fetchOrders();
       }
     } catch (error) {
-      console.error('Error completing order:', error);
     }
   };
 
@@ -429,12 +418,14 @@ const Orders = () => {
       setOrderInProgress(true);
       setActiveTab('new-order');
     } catch (error) {
-      console.error('Error loading order for modification:', error);
     }
   };
 
   const handleCompleteHoldOrder = async (orderId) => {
     try {
+      // Mark as completing a held order (should print Invoice only, NOT KOT)
+      setIsCompletingNewOrder(false);
+
       // Fetch order details to get the total amount
       const response = await api.getOrderDetails(orderId);
       setCurrentOrderId(orderId);
@@ -460,11 +451,9 @@ const Orders = () => {
 
         setShowPaymentModal(true);
       } else {
-        console.error('API Error:', response.message || 'Unknown error');
         alert('Failed to load order details: ' + (response.message || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error fetching order for completion:', error);
       alert('Error loading order details');
     }
   };
@@ -474,7 +463,6 @@ const Orders = () => {
       await api.updateOrderStatus(orderId, 'Cancelled');
       fetchOrders();
     } catch (error) {
-      console.error('Error cancelling order:', error);
     }
   };
 
@@ -489,34 +477,18 @@ const Orders = () => {
         setShowOrderDetailsModal(true);
       }
     } catch (error) {
-      console.error('Error fetching order details:', error);
     }
   };
 
   const handlePrintInvoice = async (orderId) => {
     try {
-      // Print KOT to thermal printer (backend direct print)
-      try {
-        const kotResponse = await api.directPrintKOT(orderId);
-        if (kotResponse.success) {
-          console.log('KOT sent to thermal printer:', kotResponse.message);
-        } else {
-          console.log('KOT printing message:', kotResponse.message);
-        }
-      } catch (error) {
-        console.error('Error printing KOT:', error);
-        // Continue to print invoice even if KOT fails
-      }
-
-      // Print Invoice to default printer (backend direct print)
       const invoiceResponse = await api.directPrintInvoice(orderId);
       if (invoiceResponse.success) {
-        alert('Invoice and KOT sent to printers successfully!');
+        alert('Invoice sent to printer successfully!');
       } else {
         alert('Failed to print invoice: ' + invoiceResponse.message);
       }
     } catch (error) {
-      console.error('Error printing invoice:', error);
       alert('Error printing invoice: ' + error.message);
     }
   };
@@ -854,7 +826,7 @@ const Orders = () => {
                     >
                       <div className="item-image">
                         {item.image_path ? (
-                          <img src={`http://localhost/Afkar New/${item.image_path}`} alt={item.name} />
+                          <img src={`${API_BASE_PATH}/${item.image_path}`} alt={item.name} />
                         ) : (
                           <div className="placeholder-image">📸</div>
                         )}
@@ -934,7 +906,6 @@ const Orders = () => {
                         // Then print
                         await handlePrintInvoice(currentOrderId);
                       } catch (error) {
-                        console.error('Error saving items before print:', error);
                         alert('Error saving order items');
                       }
                     }} className="print-invoice-order-btn">

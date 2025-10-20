@@ -1,53 +1,46 @@
 <?php
-// Direct Print KOT to Thermal Printer - Version 2 (Uses copy command for thermal printers)
 include '../cors.php';
+include '../config.php';
 include '../database.php';
 
-// Function to send raw data directly to printer
 function printToThermal($printer_name, $data) {
     if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
         return ['success' => false, 'message' => 'Only Windows is supported'];
     }
 
-    // Method 1: Try using COPY command with /B flag (binary mode - best for thermal printers)
     $temp_file = sys_get_temp_dir() . '\\kot_' . time() . '.prn';
     file_put_contents($temp_file, $data);
 
-    // Try copy command with binary mode
     $command = 'copy /B "' . $temp_file . '" "\\\\localhost\\' . $printer_name . '"';
     exec($command . ' 2>&1', $output, $return_var);
 
-    sleep(2); // Increased delay to ensure printer finishes before cutting
+    sleep(2);
     if (file_exists($temp_file)) {
         @unlink($temp_file);
     }
 
-    if ($return_var === 0 && !isset($output[0]) || (isset($output[0]) && stripos($output[0], 'copied') !== false)) {
-        return ['success' => true, 'message' => 'Printed via copy command', 'method' => 'copy', 'output' => $output];
+    if ($return_var === 0 && (!isset($output[0]) || stripos($output[0], 'copied') !== false)) {
+        return ['success' => true, 'message' => 'Printed via copy command', 'method' => 'copy'];
     }
 
-    // Method 2: Try direct file write to printer share
     try {
         $printer_path = "\\\\localhost\\" . $printer_name;
         $handle = @fopen($printer_path, 'wb');
 
         if ($handle) {
             fwrite($handle, $data);
-            fflush($handle); // Flush the buffer to ensure all data is sent
-            usleep(500000); // Wait 500ms (0.5 seconds) for printer to receive all data
+            fflush($handle);
+            usleep(500000);
             fclose($handle);
-            sleep(1); // Additional delay to ensure cut command completes
+            sleep(1);
             return ['success' => true, 'message' => 'Printed via direct file access', 'method' => 'direct'];
         }
     } catch (Exception $e) {
-        // Continue to next method
     }
 
-    // Method 3: Try using NET USE to map printer then write
     $temp_file2 = sys_get_temp_dir() . '\\kot_net_' . time() . '.prn';
     file_put_contents($temp_file2, $data);
 
-    // Use type command (similar to cat in Linux)
     $command2 = 'type "' . $temp_file2 . '" > "\\\\localhost\\' . $printer_name . '"';
     exec($command2 . ' 2>&1', $output2, $return_var2);
 
@@ -76,10 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     $order_id = $input['order_id'];
 
-    // KOT thermal printer name - UPDATE if different on your system
-    $thermal_printer_name = "XP-80C (copy 1)";
+    $thermal_printer_name = KOT_PRINTER;
 
-    // Check if KOT printing is enabled
     $settings_sql = "SELECT print_kot, restaurant_name FROM settings ORDER BY id DESC LIMIT 1";
     $settings_result = $conn->query($settings_sql);
     $settings = $settings_result->fetch_assoc();
@@ -92,7 +83,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     }
 
-    // Get order details
     $order_sql = "SELECT o.*, c.name as customer_name, t.table_name
                   FROM orders o
                   LEFT JOIN customers c ON o.customer_id = c.id
@@ -110,7 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $order = $order_result->fetch_assoc();
 
-    // Get ONLY items that haven't been printed to kitchen yet
     $items_sql = "SELECT oi.*, mi.name as item_name, c.name as category_name
                   FROM order_items oi
                   JOIN menu_items mi ON oi.menu_item_id = mi.id
@@ -132,21 +121,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $items[] = $row;
     }
 
-    // Generate ESC/POS commands for 80mm thermal printer (48 characters wide)
-    $escpos = chr(27) . chr(64); // Initialize printer
-
-    // Header
-    $escpos .= chr(27) . chr(97) . chr(1); // Center align
-    $escpos .= chr(27) . chr(33) . chr(24); // Double width + height
+    $escpos = chr(27) . chr(64);
+    $escpos .= chr(27) . chr(97) . chr(1);
+    $escpos .= chr(27) . chr(33) . chr(24);
     $escpos .= "KITCHEN ORDER\n";
-    $escpos .= chr(27) . chr(33) . chr(0); // Normal text
-    $escpos .= chr(27) . chr(97) . chr(1); // Center align
+    $escpos .= chr(27) . chr(33) . chr(0);
+    $escpos .= chr(27) . chr(97) . chr(1);
     $escpos .= $settings['restaurant_name'] . "\n";
     $escpos .= str_repeat("=", 48) . "\n";
 
-    // Order info
-    $escpos .= chr(27) . chr(97) . chr(0); // Left align
-    $escpos .= chr(27) . chr(33) . chr(8); // Bold text
+    $escpos .= chr(27) . chr(97) . chr(0);
+    $escpos .= chr(27) . chr(33) . chr(8);
     $escpos .= "Order #: " . $order['id'] . "\n";
     $escpos .= "Time: " . date('d/m/Y H:i:s') . "\n";
     $escpos .= "Type: " . $order['order_type'] . "\n";
@@ -159,10 +144,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $escpos .= "Customer: " . $order['customer_name'] . "\n";
     }
 
-    $escpos .= chr(27) . chr(33) . chr(0); // Normal text
+    $escpos .= chr(27) . chr(33) . chr(0);
     $escpos .= str_repeat("=", 48) . "\n";
 
-    // Group items by category
     $items_by_category = [];
     foreach ($items as $item) {
         $category = $item['category_name'] ?: 'Other';
@@ -172,47 +156,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $items_by_category[$category][] = $item;
     }
 
-    // Print items grouped by category
     foreach ($items_by_category as $category => $category_items) {
-        $escpos .= chr(27) . chr(33) . chr(8); // Bold
+        $escpos .= chr(27) . chr(33) . chr(8);
         $escpos .= strtoupper($category) . "\n";
-        $escpos .= chr(27) . chr(33) . chr(0); // Normal
+        $escpos .= chr(27) . chr(33) . chr(0);
         $escpos .= str_repeat("-", 48) . "\n";
 
         foreach ($category_items as $item) {
-            // Item name and quantity
-            $escpos .= chr(27) . chr(33) . chr(16); // Double width
+            $escpos .= chr(27) . chr(33) . chr(16);
             $escpos .= sprintf("x%d  %s\n", $item['quantity'], substr($item['item_name'], 0, 20));
-            $escpos .= chr(27) . chr(33) . chr(0); // Normal
+            $escpos .= chr(27) . chr(33) . chr(0);
             $escpos .= "\n";
         }
 
         $escpos .= str_repeat("-", 48) . "\n";
     }
 
-    // Footer
-    $escpos .= chr(27) . chr(97) . chr(1); // Center align
-    $escpos .= chr(27) . chr(33) . chr(8); // Bold
+    $escpos .= chr(27) . chr(97) . chr(1);
+    $escpos .= chr(27) . chr(33) . chr(8);
     $escpos .= "PREPARE IMMEDIATELY\n";
-    $escpos .= chr(27) . chr(33) . chr(0); // Normal
-    $escpos .= "\n\n\n\n\n\n"; // Extra blank lines to ensure all content prints before cut
+    $escpos .= chr(27) . chr(33) . chr(0);
+    $escpos .= "\n\n\n\n\n\n";
+    $escpos .= chr(29) . chr(86) . chr(66) . chr(0);
 
-    // Cut paper - using partial cut instead of full cut
-    // This leaves a small connection so paper doesn't fall
-    $escpos .= chr(29) . chr(86) . chr(66) . chr(0); // Partial cut (ESC GS V 66 0)
-    // Alternative: Use chr(29) . chr(86) . chr(1) for full cut
-    // Or remove cut command completely for manual tear
-
-    // Send to printer
     $print_result = printToThermal($thermal_printer_name, $escpos);
 
     if ($print_result['success']) {
-        // Mark items as printed
         $item_ids = array_map(function($item) { return $item['id']; }, $items);
         $item_ids_str = implode(',', $item_ids);
 
-        $update_sql = "UPDATE order_items SET kot_printed = 1
-                      WHERE id IN ($item_ids_str)";
+        $update_sql = "UPDATE order_items SET kot_printed = 1 WHERE id IN ($item_ids_str)";
         $conn->query($update_sql);
 
         echo json_encode([

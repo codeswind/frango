@@ -1,3 +1,4 @@
+import { API_BASE_URL, API_BASE_PATH } from '../config';
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
 
@@ -14,8 +15,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // API base URL
-  const API_BASE = 'http://localhost/Afkar%20New/api/settings';
+  const API_BASE = `${API_BASE_URL}/settings`;
 
   useEffect(() => {
     fetchSettings();
@@ -39,7 +39,6 @@ const Settings = () => {
         });
       }
     } catch (error) {
-      console.error('Error fetching settings:', error);
       alert('Error loading settings. Please check your connection.');
     } finally {
       setLoading(false);
@@ -72,7 +71,6 @@ const Settings = () => {
         alert('Failed to save settings: ' + result.message);
       }
     } catch (error) {
-      console.error('Error saving settings:', error);
       alert('Error saving settings. Please try again.');
     } finally {
       setSaving(false);
@@ -126,7 +124,6 @@ const Settings = () => {
         alert('Failed to generate backup: ' + result.message);
       }
     } catch (error) {
-      console.error('Error generating backup:', error);
       alert('Error generating backup. Please try again.');
     }
   };
