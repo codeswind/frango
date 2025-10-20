@@ -1,0 +1,89 @@
+/* Global styles for full-width POS system */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  color: #2c3e50;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Ensure all containers use full width */
+.page-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Full-width tables */
+.full-width-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.full-width-table table {
+  width: 100%;
+  min-width: 100%;
+}
+
+/* Full-width cards and containers */
+.card, .table-container, .content-container {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Grid layouts that use full width */
+.grid-container {
+  width: 100%;
+  display: grid;
+  gap: 20px;
+}
+
+/* Override any max-width restrictions */
+.menu-items-table,
+.users-table,
+.customers-table,
+.expenses-table,
+.orders-table {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.menu-items-table table,
+.users-table table,
+.customers-table table,
+.expenses-table table,
+.orders-table table {
+  width: 100% !important;
+  table-layout: fixed;
+}
+
+/* Responsive full-width adjustments */
+@media (max-width: 768px) {
+  .page-container {
+    padding: 15px;
+  }
+
+  .grid-container {
+    gap: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-container {
+    padding: 10px;
+  }
+
+  .grid-container {
+    gap: 10px;
+  }
+}
