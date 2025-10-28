@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { API_BASE_URL } from '../config';
+import { useToast } from '../context/ToastContext';
+import Spinner from '../components/Spinner';
 import './CustomerManagement.css';
 
 const CustomerManagement = () => {
+  const toast = useToast();
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -33,10 +37,11 @@ const CustomerManagement = () => {
         setCustomers(result.data || []);
         setFilteredCustomers(result.data || []);
       } else {
-        alert('Failed to load customers. Please try again.');
+        toast.error('Failed to load customers. Please try again.');
       }
     } catch (error) {
-      alert('Error loading customers. Please check your connection.');
+      console.error('Error loading customers:', error);
+      toast.error('Error loading customers. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -110,7 +115,7 @@ const CustomerManagement = () => {
   const handleSubmitAdd = async (e) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.mobile.trim()) {
-      alert('Name and Mobile are required fields');
+      toast.error('Name and Mobile are required fields');
       return;
     }
 
@@ -120,11 +125,12 @@ const CustomerManagement = () => {
     );
 
     if (isDuplicateMobile) {
-      alert('This mobile number already exists. Please use a different mobile number.');
+      toast.error('This mobile number already exists. Please use a different mobile number.');
       return;
     }
 
     try {
+      setSubmitting(true);
       const response = await fetch(`${API_BASE}/create.php`, {
         method: 'POST',
         headers: {
@@ -143,19 +149,22 @@ const CustomerManagement = () => {
         await fetchCustomers(); // Refresh the customer list
         setShowAddModal(false);
         setFormData({ name: '', mobile: '', address: '' });
-        alert('Customer added successfully!');
+        toast.success('Customer added successfully!');
       } else {
-        alert('Failed to add customer: ' + result.message);
+        toast.error('Failed to add customer: ' + result.message);
       }
     } catch (error) {
-      alert('Error adding customer. Please try again.');
+      console.error('Error adding customer:', error);
+      toast.error('Error adding customer. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleSubmitEdit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.mobile.trim()) {
-      alert('Name and Mobile are required fields');
+      toast.error('Name and Mobile are required fields');
       return;
     }
 
@@ -165,11 +174,12 @@ const CustomerManagement = () => {
     );
 
     if (isDuplicateMobile) {
-      alert('This mobile number already exists. Please use a different mobile number.');
+      toast.error('This mobile number already exists. Please use a different mobile number.');
       return;
     }
 
     try {
+      setSubmitting(true);
       const response = await fetch(`${API_BASE}/update.php`, {
         method: 'POST',
         headers: {
@@ -190,12 +200,15 @@ const CustomerManagement = () => {
         setShowEditModal(false);
         setEditingCustomer(null);
         setFormData({ name: '', mobile: '', address: '' });
-        alert('Customer updated successfully!');
+        toast.success('Customer updated successfully!');
       } else {
-        alert('Failed to update customer: ' + result.message);
+        toast.error('Failed to update customer: ' + result.message);
       }
     } catch (error) {
-      alert('Error updating customer. Please try again.');
+      console.error('Error updating customer:', error);
+      toast.error('Error updating customer. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -216,6 +229,7 @@ const CustomerManagement = () => {
 
   return (
     <div className="customer-management-page">
+      {(loading || submitting) && <Spinner overlay={true} />}
       <div className="page-header">
         <h1>Customer Management</h1>
         <button className="btn btn-primary" onClick={handleAddCustomer}>
@@ -255,20 +269,6 @@ const CustomerManagement = () => {
               onChange={(e) => setAddressFilter(e.target.value)}
               className="search-input"
             />
-          </div>
-          <div className="search-actions">
-            <button
-              onClick={() => {
-                setNameFilter('');
-                setMobileFilter('');
-                setAddressFilter('');
-              }}
-              className="btn btn-secondary clear-search-btn"
-              title="Clear all search filters"
-            >
-              <span className="material-icons">refresh</span>
-              Clear
-            </button>
           </div>
         </div>
       </div>

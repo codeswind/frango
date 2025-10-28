@@ -8,6 +8,9 @@ const Layout = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Check if user is cashier (cashier-only mode - no sidebar)
+  const isCashierOnly = user?.role === 'Cashier';
+
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -48,22 +51,29 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className={`layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className={`layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${isCashierOnly ? 'cashier-only' : ''}`}>
       <header className="header">
         <div className="header-left">
-          <button
-            className="sidebar-toggle-btn"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          >
-            <span className="material-icons">{sidebarCollapsed ? 'menu_open' : 'menu'}</span>
-          </button>
-          <button
-            className="mobile-menu-btn"
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-          >
-            <span className="material-icons">menu</span>
-          </button>
-          <h1>Restaurant POS</h1>
+          {!isCashierOnly && (
+            <>
+              <button
+                className="sidebar-toggle-btn"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              >
+                <span className="material-icons">{sidebarCollapsed ? 'menu_open' : 'menu'}</span>
+              </button>
+              <button
+                className="mobile-menu-btn"
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+              >
+                <span className="material-icons">menu</span>
+              </button>
+            </>
+          )}
+          <div className="header-branding">
+            <h1>WindPOS</h1>
+            <span className="header-tagline">for restaurants</span>
+          </div>
         </div>
         <div className="header-center">
           <div className="clock-display">
@@ -80,29 +90,46 @@ const Layout = ({ children }) => {
         </div>
       </header>
 
-      <nav className={`sidebar ${showMobileMenu ? 'mobile-open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}>
-        <ul>
-          {navigationItems.map(item => (
-            hasAccess(item.role) && (
-              <li key={item.path}>
-                <button
-                  onClick={() => handleNavigation(item.path)}
-                  className="nav-button"
-                  title={sidebarCollapsed ? item.name : ''}
-                >
-                  <span className="material-icons icon-sm">{item.icon}</span>
-                  <span className="nav-text">{item.name}</span>
-                </button>
-              </li>
-            )
-          ))}
-        </ul>
-      </nav>
+      {!isCashierOnly && (
+        <>
+          <nav className={`sidebar ${showMobileMenu ? 'mobile-open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}>
+            <ul>
+              {navigationItems.map(item => (
+                hasAccess(item.role) && (
+                  <li key={item.path}>
+                    <button
+                      onClick={() => handleNavigation(item.path)}
+                      className="nav-button"
+                      title={sidebarCollapsed ? item.name : ''}
+                    >
+                      <span className="material-icons icon-sm">{item.icon}</span>
+                      <span className="nav-text">{item.name}</span>
+                    </button>
+                  </li>
+                )
+              ))}
+            </ul>
+          </nav>
 
-      {showMobileMenu && <div className="mobile-overlay" onClick={() => setShowMobileMenu(false)}></div>}
+          {showMobileMenu && <div className="mobile-overlay" onClick={() => setShowMobileMenu(false)}></div>}
+        </>
+      )}
 
       <main className="main-content">
         {children}
+        {!isCashierOnly && (
+          <footer className="app-footer">
+            <div className="footer-content">
+              <div className="footer-branding">
+                <strong>WindPOS</strong> <span className="footer-tagline">for restaurants</span> | Powered by <strong className="footer-company">CodesWind</strong>
+              </div>
+              <div className="footer-contact">
+                <span>📱 0722440666</span>
+                <span>🌐 codeswind.cloud</span>
+              </div>
+            </div>
+          </footer>
+        )}
       </main>
     </div>
   );

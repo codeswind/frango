@@ -1,0 +1,54 @@
+# ============================================
+# ENVIRONMENT & SENSITIVE FILES
+# ============================================
+# Never commit these files - they contain sensitive credentials
+api/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+.env
+.env.local
+
+# ============================================
+# DEPENDENCY DIRECTORIES
+# ============================================
+node_modules/
+vendor/
+
+# ============================================
+# BUILD & CACHE FILES
+# ============================================
+frontend/dist/
+frontend/build/
+.cache/
+
+# ============================================
+# IDE & EDITOR FILES
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ============================================
+# SYSTEM FILES
+# ============================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================
+# LOG FILES
+# ============================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# BACKUP FILES
+# ============================================
+*.bak
+*.backup
+*.sql.gz

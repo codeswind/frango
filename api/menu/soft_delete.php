@@ -13,8 +13,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     }
 
-    $id = (int)$input['id'];
-    $is_deleted = (int)$input['is_deleted'];
+    $id = intval($input['id']);
+    $is_deleted = intval($input['is_deleted']);
+
+    // Validate data
+    if ($id <= 0 || ($is_deleted !== 0 && $is_deleted !== 1)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid input data'
+        ]);
+        exit;
+    }
 
     $sql = "UPDATE menu_items SET is_deleted = ? WHERE id = ?";
     $stmt = $conn->prepare($sql);

@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../components/Modal';
 import api from '../api';
+import { useToast } from '../context/ToastContext';
+import Spinner from '../components/Spinner';
 import './Expenses.css';
 
 const Expenses = () => {
+  const toast = useToast();
   const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newExpense, setNewExpense] = useState({
     description: '',
@@ -59,11 +64,18 @@ const Expenses = () => {
 
   const fetchExpenses = async () => {
     try {
+      setLoading(true);
       const response = await api.getExpenses();
       if (response.success) {
         setExpenses(response.data);
+      } else {
+        toast.error('Error fetching expenses: ' + response.message);
       }
     } catch (fetchError) {
+      console.error('Error fetching expenses:', fetchError);
+      toast.error('Error fetching expenses');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -71,9 +83,10 @@ const Expenses = () => {
   const handleAddExpense = async (e) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       const response = await api.createExpense(newExpense);
       if (response.success) {
-        alert('Expense added successfully');
+        toast.success('Expense added successfully');
         setShowAddModal(false);
         setNewExpense({
           description: '',
@@ -82,10 +95,13 @@ const Expenses = () => {
         });
         fetchExpenses();
       } else {
-        alert('Error adding expense: ' + response.message);
+        toast.error('Error adding expense: ' + response.message);
       }
     } catch (addError) {
-      alert('Error adding expense');
+      console.error('Error adding expense:', addError);
+      toast.error('Error adding expense');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -125,12 +141,13 @@ const Expenses = () => {
   const handleUpdateExpense = async (e) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       const response = await api.updateExpense({
         id: editingExpense.id,
         ...editExpense
       });
       if (response.success) {
-        alert('Expense updated successfully');
+        toast.success('Expense updated successfully');
         setShowEditModal(false);
         setEditingExpense(null);
         setEditExpense({
@@ -140,15 +157,19 @@ const Expenses = () => {
         });
         fetchExpenses();
       } else {
-        alert('Error updating expense: ' + response.message);
+        toast.error('Error updating expense: ' + response.message);
       }
     } catch (updateError) {
-      alert('Error updating expense');
+      console.error('Error updating expense:', updateError);
+      toast.error('Error updating expense');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="expenses-page">
+      {(loading || submitting) && <Spinner overlay={true} />}
       <div className="page-header">
         <h1>Expense Management</h1>
         <button

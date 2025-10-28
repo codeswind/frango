@@ -34,7 +34,7 @@
 .search-row {
   display: flex;
   gap: 15px;
-  align-items: end;
+  align-items: flex-end;
   flex-wrap: wrap;
 }
 
@@ -62,6 +62,7 @@
   font-size: 14px;
   transition: border-color 0.2s;
   box-sizing: border-box;
+  height: 42px;
 }
 
 .search-input:focus {
@@ -78,7 +79,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
 .clear-search-btn {
@@ -86,15 +87,19 @@
   color: white;
   border: none;
   border-radius: 6px;
-  padding: 10px 15px;
+  padding: 0 15px;
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   font-size: 14px;
   font-weight: 500;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: 42px;
+  min-width: 100px;
+  white-space: nowrap;
 }
 
 .clear-search-btn:hover {

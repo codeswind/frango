@@ -67,7 +67,16 @@ function printToThermal($printer_name, $data) {
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
-    $order_id = $input['order_id'];
+    $order_id = intval($input['order_id']);
+
+    // Validate order_id
+    if ($order_id <= 0) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid order ID'
+        ]);
+        exit;
+    }
 
     $thermal_printer_name = KOT_PRINTER;
 
@@ -87,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                   FROM orders o
                   LEFT JOIN customers c ON o.customer_id = c.id
                   LEFT JOIN tables t ON o.table_id = t.id
-                  WHERE o.id = '$order_id'";
+                  WHERE o.id = $order_id";
     $order_result = $conn->query($order_sql);
 
     if ($order_result->num_rows == 0) {
@@ -104,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                   FROM order_items oi
                   JOIN menu_items mi ON oi.menu_item_id = mi.id
                   LEFT JOIN categories c ON mi.category_id = c.id
-                  WHERE oi.order_id = '$order_id' AND oi.kot_printed = 0
+                  WHERE oi.order_id = $order_id AND oi.kot_printed = 0
                   ORDER BY c.name, mi.name";
     $items_result = $conn->query($items_sql);
 
@@ -136,6 +145,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $escpos .= "Time: " . date('d/m/Y H:i:s') . "\n";
     $escpos .= "Type: " . $order['order_type'] . "\n";
 
+    if ($order['external_order_id']) {
+        $escpos .= chr(27) . chr(33) . chr(16);
+        $escpos .= $order['order_type'] . " ID: " . $order['external_order_id'] . "\n";
+        $escpos .= chr(27) . chr(33) . chr(8);
+    }
+
     if ($order['table_name']) {
         $escpos .= "Table: " . $order['table_name'] . "\n";
     }
@@ -166,6 +181,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $escpos .= chr(27) . chr(33) . chr(16);
             $escpos .= sprintf("x%d  %s\n", $item['quantity'], substr($item['item_name'], 0, 20));
             $escpos .= chr(27) . chr(33) . chr(0);
+
+            if (!empty($item['notes'])) {
+                $escpos .= chr(27) . chr(33) . chr(8);
+                $escpos .= "    Note: " . $item['notes'] . "\n";
+                $escpos .= chr(27) . chr(33) . chr(0);
+            }
+
             $escpos .= "\n";
         }
 
@@ -176,17 +198,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $escpos .= chr(27) . chr(33) . chr(8);
     $escpos .= "PREPARE IMMEDIATELY\n";
     $escpos .= chr(27) . chr(33) . chr(0);
+    $escpos .= "\n";
+    $escpos .= str_repeat("-", 48) . "\n";
+    $escpos .= chr(27) . chr(33) . chr(8);
+    $escpos .= "WindPOS for restaurants\n";
+    $escpos .= chr(27) . chr(33) . chr(0);
+    $escpos .= "Powered by CodesWind\n";
+    $escpos .= "www.codeswind.cloud | 0722440666\n";
     $escpos .= "\n\n\n\n\n\n";
     $escpos .= chr(29) . chr(86) . chr(66) . chr(0);
 
     $print_result = printToThermal($thermal_printer_name, $escpos);
 
     if ($print_result['success']) {
-        $item_ids = array_map(function($item) { return $item['id']; }, $items);
+        $item_ids = array_map(function($item) { return intval($item['id']); }, $items);
         $item_ids_str = implode(',', $item_ids);
 
-        $update_sql = "UPDATE order_items SET kot_printed = 1 WHERE id IN ($item_ids_str)";
-        $conn->query($update_sql);
+        if (!empty($item_ids_str)) {
+            $update_sql = "UPDATE order_items SET kot_printed = 1 WHERE id IN ($item_ids_str)";
+            $conn->query($update_sql);
+        }
 
         echo json_encode([
             'success' => true,

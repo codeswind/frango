@@ -17,15 +17,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
         $maxSize = 5 * 1024 * 1024; // 5MB
 
         $fileType = $_FILES['image']['type'];
         $fileSize = $_FILES['image']['size'];
+        $fileExtension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
 
         if (!in_array($fileType, $allowedTypes)) {
             echo json_encode([
                 'success' => false,
                 'message' => 'Invalid file type. Only JPEG, PNG, and GIF are allowed.'
+            ]);
+            exit;
+        }
+
+        if (!in_array($fileExtension, $allowedExtensions)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Invalid file extension. Only jpg, jpeg, png, and gif are allowed.'
             ]);
             exit;
         }
@@ -38,7 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit;
         }
 
-        $fileExtension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
         $fileName = uniqid() . '.' . $fileExtension;
         $filePath = $uploadDir . $fileName;
 

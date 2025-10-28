@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import { useToast } from '../context/ToastContext';
+import Spinner from '../components/Spinner';
 import './Tables.css';
 
 const Tables = () => {
+  const toast = useToast();
   const [tables, setTables] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
@@ -18,49 +23,64 @@ const Tables = () => {
 
   const fetchTables = async () => {
     try {
+      setLoading(true);
       const response = await api.getTables();
       if (response.success) {
         setTables(response.data);
+      } else {
+        toast.error('Error fetching tables: ' + response.message);
       }
     } catch (error) {
+      console.error('Error fetching tables:', error);
+      toast.error('Error fetching tables');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAddTable = async (e) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       const response = await api.createTable(formData);
       if (response.success) {
-        alert(response.message);
+        toast.success(response.message);
         setShowAddModal(false);
         setFormData({ table_name: '', status: 'Available' });
         fetchTables();
       } else {
-        alert('Error creating table: ' + response.message);
+        toast.error('Error creating table: ' + response.message);
       }
     } catch (error) {
-      alert('Error creating table');
+      console.error('Error creating table:', error);
+      toast.error('Error creating table');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleEditTable = async (e) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       const response = await api.updateTable({
         id: editingTable.id,
         ...formData
       });
       if (response.success) {
-        alert(response.message);
+        toast.success(response.message);
         setShowEditModal(false);
         setEditingTable(null);
         setFormData({ table_name: '', status: 'Available' });
         fetchTables();
       } else {
-        alert('Error updating table: ' + response.message);
+        toast.error('Error updating table: ' + response.message);
       }
     } catch (error) {
-      alert('Error updating table');
+      console.error('Error updating table:', error);
+      toast.error('Error updating table');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -70,17 +90,17 @@ const Tables = () => {
       const currentActiveNum = parseInt(currentActive);
       const newActive = currentActiveNum === 1 ? 0 : 1;
 
-
       const response = await api.toggleTableStatus(id, newActive);
 
       if (response.success) {
-        alert(response.message);
+        toast.success(response.message);
         fetchTables();
       } else {
-        alert('Error updating status: ' + response.message);
+        toast.error('Error updating status: ' + response.message);
       }
     } catch (error) {
-      alert('Error updating status');
+      console.error('Error updating status:', error);
+      toast.error('Error updating status');
     }
   };
 
@@ -90,13 +110,14 @@ const Tables = () => {
         const response = await api.softDeleteTable(id, 1);
 
         if (response.success) {
-          alert(response.message);
+          toast.success(response.message);
           fetchTables();
         } else {
-          alert('Error deleting table: ' + response.message);
+          toast.error('Error deleting table: ' + response.message);
         }
       } catch (error) {
-        alert('Error deleting table');
+        console.error('Error deleting table:', error);
+        toast.error('Error deleting table');
       }
     }
   };
@@ -119,6 +140,7 @@ const Tables = () => {
 
   return (
     <div className="table-management">
+      {(loading || submitting) && <Spinner overlay={true} />}
       <div className="page-header">
         <h1>Table Management</h1>
         <div className="header-actions">

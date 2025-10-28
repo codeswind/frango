@@ -13,8 +13,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     }
 
-    $id = (int)$input['id'];
-    $is_active = (int)$input['is_active'];
+    $id = intval($input['id']);
+    $is_active = intval($input['is_active']);
+
+    // Validate data
+    if ($id <= 0 || ($is_active !== 0 && $is_active !== 1)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid input data'
+        ]);
+        exit;
+    }
 
     // Only update if item is not deleted
     $sql = "UPDATE menu_items SET is_active = ? WHERE id = ? AND is_deleted = 0";

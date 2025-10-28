@@ -1,6 +1,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import api from '../api';
 import './Reports.css';
+import {
+  exportSalesPDF,
+  exportOrdersPDF,
+  exportExpensesPDF,
+  exportProfitPDF,
+  exportMenuPDF,
+  exportCustomersPDF,
+  exportGenericPDF
+} from '../utils/pdfExport';
 
 // Constants
 const MAX_PRICE_THRESHOLD = 999999;
@@ -120,8 +129,14 @@ const Reports = () => {
     };
   };
 
-  const filterOrdersByDateRange = useCallback((orders) => {
+  const filterOrdersByDateRange = useCallback((orders, includeCancelled = false) => {
     return orders.filter(order => {
+      // Exclude cancelled orders from revenue calculations by default
+      if (!includeCancelled && order.status === 'Cancelled') {
+        return false;
+      }
+
+      // Filter by date range
       if (!startDate && !endDate) return true;
       const orderDate = new Date(order.created_at || order.date);
       const start = startDate ? new Date(startDate) : new Date('1970-01-01');
@@ -145,10 +160,13 @@ const Reports = () => {
             if (ordersResponse.success) {
               const orders = ordersResponse.data || [];
 
-              // Filter orders by date range if specified
-              const filteredOrders = filterOrdersByDateRange(orders);
+              // Filter orders by date range - exclude cancelled from revenue calculations
+              const filteredOrders = filterOrdersByDateRange(orders, false);
 
-              // Basic metrics
+              // Get all orders including cancelled for statistics
+              const allFilteredOrders = filterOrdersByDateRange(orders, true);
+
+              // Basic metrics (excluding cancelled orders)
               const totalSales = filteredOrders.reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0);
               const totalOrders = filteredOrders.length;
               const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
@@ -249,13 +267,14 @@ const Reports = () => {
                 .sort((a, b) => b.total - a.total)
                 .slice(0, 5);
 
-              // Sales trends
-              const completedOrders = filteredOrders.filter(o => o.status === 'Completed').length;
-              const cancelledOrders = filteredOrders.filter(o => o.status === 'Cancelled').length;
-              const holdOrders = filteredOrders.filter(o => o.status === 'Hold').length;
+              // Sales trends (include cancelled for statistics)
+              const completedOrders = allFilteredOrders.filter(o => o.status === 'Completed').length;
+              const cancelledOrders = allFilteredOrders.filter(o => o.status === 'Cancelled').length;
+              const holdOrders = allFilteredOrders.filter(o => o.status === 'Hold').length;
+              const totalAllOrders = allFilteredOrders.length;
 
-              const completionRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
-              const cancellationRate = totalOrders > 0 ? (cancelledOrders / totalOrders) * 100 : 0;
+              const completionRate = totalAllOrders > 0 ? (completedOrders / totalAllOrders) * 100 : 0;
+              const cancellationRate = totalAllOrders > 0 ? (cancelledOrders / totalAllOrders) * 100 : 0;
 
               // Advanced metrics
               const highestSingleOrder = filteredOrders.reduce((max, order) =>
@@ -345,24 +364,27 @@ const Reports = () => {
             if (response.success) {
               const allOrders = response.data || [];
 
-              // Filter orders by date range if specified (same logic as sales report)
-              const orders = filterOrdersByDateRange(allOrders);
+              // Filter orders - exclude cancelled from revenue calculations
+              const orders = filterOrdersByDateRange(allOrders, false);
 
-              // Calculate order statistics
-              const totalOrders = orders.length;
-              const completedOrders = orders.filter(o => o.status === 'Completed').length;
-              const holdOrders = orders.filter(o => o.status === 'Hold').length;
-              const cancelledOrders = orders.filter(o => o.status === 'Cancelled').length;
-              const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+              // Get all orders including cancelled for statistics
+              const allFilteredOrders = filterOrdersByDateRange(allOrders, true);
 
-              // Calculate order type breakdown
+              // Calculate order statistics (including cancelled for counts)
+              const totalOrders = allFilteredOrders.length;
+              const completedOrders = allFilteredOrders.filter(o => o.status === 'Completed').length;
+              const holdOrders = allFilteredOrders.filter(o => o.status === 'Hold').length;
+              const cancelledOrders = allFilteredOrders.filter(o => o.status === 'Cancelled').length;
+              const pendingOrders = allFilteredOrders.filter(o => o.status === 'Pending').length;
+
+              // Calculate order type breakdown (exclude cancelled)
               const dineInOrders = orders.filter(o => o.order_type === 'Dine In').length;
               const takeawayOrders = orders.filter(o => o.order_type === 'Takeaway').length;
               const deliveryOrders = orders.filter(o => o.order_type === 'Delivery').length;
 
-              // Calculate average order value
+              // Calculate average order value (excluding cancelled orders)
               const totalSales = orders.reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0);
-              const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+              const avgOrderValue = orders.length > 0 ? totalSales / orders.length : 0;
 
               // Calculate completion rate
               const completionRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
@@ -668,7 +690,8 @@ const Reports = () => {
 
             if (usersResponse.success) {
               const users = usersResponse.data || [];
-              const orders = ordersResponse.success ? ordersResponse.data || [] : [];
+              const allOrders = ordersResponse.success ? ordersResponse.data || [] : [];
+              const orders = filterOrdersByDateRange(allOrders);
 
               // Analyze user roles
               const roleStats = {
@@ -788,7 +811,17 @@ const Reports = () => {
             }
 
             if (expensesResponse.success) {
-              const expenses = expensesResponse.data || [];
+              const allExpenses = expensesResponse.data || [];
+
+              // Filter expenses by date range if specified
+              const expenses = allExpenses.filter(expense => {
+                if (!startDate && !endDate) return true;
+                const expenseDate = new Date(expense.date || expense.created_at);
+                const start = startDate ? new Date(startDate) : new Date('1970-01-01');
+                const end = endDate ? new Date(endDate + 'T23:59:59') : new Date();
+                return expenseDate >= start && expenseDate <= end;
+              });
+
               totalExpenses = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
             }
 
@@ -996,7 +1029,8 @@ const Reports = () => {
             if (categoriesResponse.success) {
               const categories = categoriesResponse.data || [];
               const menuItems = menuResponse.success ? menuResponse.data || [] : [];
-              const orders = ordersResponse.success ? ordersResponse.data || [] : [];
+              const allOrders = ordersResponse.success ? ordersResponse.data || [] : [];
+              const orders = filterOrdersByDateRange(allOrders);
 
               // Calculate category statistics
               const categoryStats = {};
@@ -1137,6 +1171,56 @@ const Reports = () => {
   useEffect(() => {
     fetchReportData();
   }, [fetchReportData]);
+
+  // PDF Export Handler
+  const handleExportPDF = () => {
+    if (!reportData) {
+      alert('No data to export. Please generate a report first.');
+      return;
+    }
+
+    const dateRange = { start: startDate || 'All Time', end: endDate || 'Present' };
+
+    try {
+      switch (activeReport) {
+        case 'sales':
+          exportSalesPDF(reportData, dateRange);
+          break;
+        case 'orders':
+          exportOrdersPDF(reportData, dateRange);
+          break;
+        case 'expenses':
+          exportExpensesPDF(reportData, dateRange);
+          break;
+        case 'profit':
+          exportProfitPDF(reportData, dateRange);
+          break;
+        case 'menu':
+          exportMenuPDF(reportData, dateRange);
+          break;
+        case 'customers':
+          exportCustomersPDF(reportData, dateRange);
+          break;
+        case 'payments':
+          exportGenericPDF('Payment Methods Report', reportData, dateRange);
+          break;
+        case 'tables':
+          exportGenericPDF('Table Analytics Report', reportData, dateRange);
+          break;
+        case 'categories':
+          exportGenericPDF('Category Performance Report', reportData, dateRange);
+          break;
+        case 'staff':
+          exportGenericPDF('Staff Performance Report', reportData, dateRange);
+          break;
+        default:
+          exportGenericPDF('Report', reportData, dateRange);
+      }
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Failed to export PDF. Please try again.');
+    }
+  };
 
   const renderReportContent = () => {
     if (loading) {
@@ -2818,20 +2902,61 @@ const Reports = () => {
         <div style={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           gap: '12px',
           marginBottom: '20px',
           paddingBottom: '15px',
           borderBottom: '2px solid #4a5568'
         }}>
-          <span className="material-icons" style={{
-            color: reportTypes.find(r => r.id === activeReport)?.color || '#a0aec0',
-            fontSize: '28px'
-          }}>
-            {reportTypes.find(r => r.id === activeReport)?.icon}
-          </span>
-          <h2 style={{ margin: 0, color: '#e2e8f0' }}>
-            {reportTypes.find(r => r.id === activeReport)?.name}
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span className="material-icons" style={{
+              color: reportTypes.find(r => r.id === activeReport)?.color || '#a0aec0',
+              fontSize: '28px'
+            }}>
+              {reportTypes.find(r => r.id === activeReport)?.icon}
+            </span>
+            <h2 style={{ margin: 0, color: '#e2e8f0' }}>
+              {reportTypes.find(r => r.id === activeReport)?.name}
+            </h2>
+          </div>
+
+          {/* Export PDF Button */}
+          <button
+            onClick={handleExportPDF}
+            disabled={!reportData || loading}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: reportData && !loading ? '#4CAF50' : '#4a5568',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: reportData && !loading ? 'pointer' : 'not-allowed',
+              fontSize: '14px',
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+              opacity: reportData && !loading ? 1 : 0.6
+            }}
+            onMouseOver={(e) => {
+              if (reportData && !loading) {
+                e.currentTarget.style.backgroundColor = '#45a049';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (reportData && !loading) {
+                e.currentTarget.style.backgroundColor = '#4CAF50';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }
+            }}
+          >
+            <span className="material-icons" style={{ fontSize: '20px' }}>picture_as_pdf</span>
+            Export PDF
+          </button>
         </div>
 
         {renderReportContent()}

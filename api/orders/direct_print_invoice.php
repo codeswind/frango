@@ -50,7 +50,16 @@ function printToThermal($printer_name, $data) {
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
-    $order_id = $input['order_id'];
+    $order_id = intval($input['order_id']);
+
+    // Validate order_id
+    if ($order_id <= 0) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid order ID'
+        ]);
+        exit;
+    }
 
     $invoice_printer_name = INVOICE_PRINTER;
 
@@ -73,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                   LEFT JOIN customers c ON o.customer_id = c.id
                   LEFT JOIN tables t ON o.table_id = t.id
                   LEFT JOIN payments p ON o.id = p.order_id
-                  WHERE o.id = '$order_id'";
+                  WHERE o.id = $order_id";
     $order_result = $conn->query($order_sql);
 
     if ($order_result->num_rows == 0) {
@@ -89,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $items_sql = "SELECT oi.*, mi.name as item_name
                   FROM order_items oi
                   JOIN menu_items mi ON oi.menu_item_id = mi.id
-                  WHERE oi.order_id = '$order_id'
+                  WHERE oi.order_id = $order_id
                   ORDER BY mi.name";
     $items_result = $conn->query($items_sql);
 
@@ -103,6 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $tax_rate = floatval($settings['tax_rate']) / 100;
     $tax_amount = $subtotal * $tax_rate;
     $total_amount = $subtotal + $tax_amount;
+
+    // Get discount and payment details
+    $discount_amount = floatval($order['discount_amount']) ?? 0;
+    $final_amount = floatval($order['final_amount']) ?? $total_amount;
+    $paid_amount = floatval($order['paid_amount']) ?? 0;
+    $balance = floatval($order['balance']) ?? 0;
 
     $escpos = chr(27) . chr(64);
 
@@ -164,17 +179,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $escpos .= sprintf("%-34s %11.2f\n", "Subtotal:", $subtotal);
     $escpos .= sprintf("%-34s %11.2f\n", "Tax (" . $settings['tax_rate'] . "%):", $tax_amount);
+
+    // Show discount if applicable
+    if ($discount_amount > 0) {
+        $escpos .= sprintf("%-34s %11.2f\n", "Discount:", -$discount_amount);
+    }
+
     $escpos .= str_repeat("=", 48) . "\n";
 
+    // Show final amount if there's a discount, otherwise show total
+    $display_amount = ($discount_amount > 0) ? $final_amount : $total_amount;
     $escpos .= chr(27) . chr(33) . chr(24);
-    $escpos .= sprintf("TOTAL: Rs.%8.2f\n", $total_amount);
+    $escpos .= sprintf("TOTAL: Rs.%8.2f\n", $display_amount);
     $escpos .= chr(27) . chr(33) . chr(0);
     $escpos .= str_repeat("=", 48) . "\n";
+
+    // Show cash payment details if applicable
+    if ($paid_amount > 0 && $order['payment_method'] === 'Cash') {
+        $escpos .= chr(27) . chr(33) . chr(8);
+        $escpos .= sprintf("%-34s %11.2f\n", "Paid:", $paid_amount);
+        $escpos .= sprintf("%-34s %11.2f\n", "Balance:", $balance);
+        $escpos .= chr(27) . chr(33) . chr(0);
+        $escpos .= str_repeat("-", 48) . "\n";
+    }
 
     $escpos .= chr(27) . chr(97) . chr(1);
     $escpos .= "\n";
     $escpos .= "Thank you for your business!\n";
     $escpos .= "Please visit again\n";
+    $escpos .= "\n";
+    $escpos .= str_repeat("-", 48) . "\n";
+    $escpos .= chr(27) . chr(33) . chr(8);
+    $escpos .= "WindPOS for restaurants\n";
+    $escpos .= chr(27) . chr(33) . chr(0);
+    $escpos .= "Powered by CodesWind\n";
+    $escpos .= "www.codeswind.cloud | 0722440666\n";
     $escpos .= "\n\n\n\n\n\n";
     $escpos .= chr(29) . chr(86) . chr(66) . chr(0);
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { API_BASE_PATH } from '../config';
+import { useToast } from '../context/ToastContext';
 import Modal from '../components/Modal';
+import Spinner from '../components/Spinner';
 import api from '../api';
 import './MenuManagement.css';
 
@@ -25,6 +27,10 @@ const MenuManagement = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [pagination, setPagination] = useState(null);
   const [newCategory, setNewCategory] = useState({ name: '' });
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const toast = useToast();
 
   useEffect(() => {
     fetchMenuItems();
@@ -33,22 +39,33 @@ const MenuManagement = () => {
 
   const fetchMenuItems = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await api.getMenuItems(selectedCategory, '', currentPage, itemsPerPage);
       if (response.success) {
         setMenuItems(response.data);
         setPagination(response.pagination);
+      } else {
+        toast.error('Failed to load menu items');
       }
     } catch (error) {
+      console.error('Error fetching menu items:', error);
+      toast.error('Error loading menu items');
+    } finally {
+      setLoading(false);
     }
-  }, [selectedCategory, currentPage, itemsPerPage]);
+  }, [selectedCategory, currentPage, itemsPerPage, toast]);
 
   const fetchCategories = async () => {
     try {
       const response = await api.getCategories();
       if (response.success) {
         setCategories(response.data);
+      } else {
+        toast.error('Failed to load categories');
       }
     } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Error loading categories');
     }
   };
 
@@ -69,6 +86,7 @@ const MenuManagement = () => {
   const handleAddItem = async (e) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       let imagePath = newItem.image_path;
 
       // Upload image if selected
@@ -77,7 +95,7 @@ const MenuManagement = () => {
         if (uploadResponse.success) {
           imagePath = uploadResponse.image_path;
         } else {
-          alert('Error uploading image: ' + uploadResponse.message);
+          toast.error('Error uploading image: ' + uploadResponse.message);
           return;
         }
       }
@@ -86,7 +104,7 @@ const MenuManagement = () => {
       const response = await api.createMenuItem(itemToCreate);
 
       if (response.success) {
-        alert('Menu item added successfully');
+        toast.success('Menu item added successfully');
         setShowAddItemModal(false);
         setNewItem({
           name: '',
@@ -99,27 +117,34 @@ const MenuManagement = () => {
         setImagePreview('');
         fetchMenuItems();
       } else {
-        alert('Error adding menu item: ' + response.message);
+        toast.error('Error adding menu item: ' + response.message);
       }
     } catch (error) {
-      alert('Error adding menu item');
+      console.error('Error adding menu item:', error);
+      toast.error('Error adding menu item');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleAddCategory = async (e) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       const response = await api.createCategory(newCategory);
       if (response.success) {
-        alert('Category added successfully');
+        toast.success('Category added successfully');
         setShowAddCategoryModal(false);
         setNewCategory({ name: '' });
         fetchCategories();
       } else {
-        alert('Error adding category: ' + response.message);
+        toast.error('Error adding category: ' + response.message);
       }
     } catch (error) {
-      alert('Error adding category');
+      console.error('Error adding category:', error);
+      toast.error('Error adding category');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -139,6 +164,7 @@ const MenuManagement = () => {
   const handleUpdateItem = async (e) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       let imagePath = editingItem.image_path;
 
       // Upload new image if selected
@@ -147,7 +173,7 @@ const MenuManagement = () => {
         if (uploadResponse.success) {
           imagePath = uploadResponse.image_path;
         } else {
-          alert('Error uploading image: ' + uploadResponse.message);
+          toast.error('Error uploading image: ' + uploadResponse.message);
           return;
         }
       }
@@ -156,17 +182,20 @@ const MenuManagement = () => {
       const response = await api.updateMenuItem(itemToUpdate);
 
       if (response.success) {
-        alert('Menu item updated successfully');
+        toast.success('Menu item updated successfully');
         setShowEditModal(false);
         setEditingItem(null);
         setSelectedImage(null);
         setImagePreview('');
         fetchMenuItems();
       } else {
-        alert('Error updating menu item: ' + response.message);
+        toast.error('Error updating menu item: ' + response.message);
       }
     } catch (error) {
-      alert('Error updating menu item');
+      console.error('Error updating menu item:', error);
+      toast.error('Error updating menu item');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -176,13 +205,14 @@ const MenuManagement = () => {
       const response = await api.toggleMenuItemStatus(id, newStatus);
 
       if (response.success) {
-        alert(response.message);
+        toast.success(response.message);
         fetchMenuItems();
       } else {
-        alert('Error updating status: ' + response.message);
+        toast.error('Error updating status: ' + response.message);
       }
     } catch (error) {
-      alert('Error updating status');
+      console.error('Error updating status:', error);
+      toast.error('Error updating status');
     }
   };
 
@@ -192,19 +222,21 @@ const MenuManagement = () => {
         const response = await api.softDeleteMenuItem(id, 1);
 
         if (response.success) {
-          alert(response.message);
+          toast.success(response.message);
           fetchMenuItems();
         } else {
-          alert('Error deleting item: ' + response.message);
+          toast.error('Error deleting item: ' + response.message);
         }
       } catch (error) {
-        alert('Error deleting item');
+        console.error('Error deleting item:', error);
+        toast.error('Error deleting item');
       }
     }
   };
 
   return (
     <div className="menu-management">
+      {(loading || submitting) && <Spinner overlay={true} />}
       <div className="page-header">
         <h1>Menu Management</h1>
         <div className="header-actions">

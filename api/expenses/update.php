@@ -1,26 +1,59 @@
 <?php
 include '../cors.php';
 include '../database.php';
+include '../auth.php';
+
+// Require authentication
+requireAuthWithTimeout();
+
+// Only Admin can manage expenses
+requireRole(PERM_VIEW_EXPENSES);
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
 
-    $id = $input['id'];
-    $description = $input['description'];
-    $amount = $input['amount'];
-    $date = $input['date'];
-
-    if (empty($id) || empty($description) || empty($amount) || empty($date)) {
+    // Validate required fields
+    if (!$input || !isset($input['id']) || !isset($input['description']) || !isset($input['amount']) || !isset($input['date'])) {
         echo json_encode([
             'success' => false,
-            'message' => 'All fields are required'
+            'message' => 'Missing required fields'
+        ]);
+        exit;
+    }
+
+    $id = intval($input['id']);
+    $description = trim($input['description']);
+    $amount = floatval($input['amount']);
+    $date = trim($input['date']);
+
+    // Validate data
+    if ($id <= 0) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid expense ID'
+        ]);
+        exit;
+    }
+
+    if (empty($description)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Description is required'
+        ]);
+        exit;
+    }
+
+    if ($amount < 0) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Amount must be positive'
         ]);
         exit;
     }
 
     $sql = "UPDATE expenses SET description = ?, amount = ?, date = ? WHERE id = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sssi", $description, $amount, $date, $id);
+    $stmt->bind_param("sdsi", $description, $amount, $date, $id);
 
     if ($stmt->execute()) {
         echo json_encode([

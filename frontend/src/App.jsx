@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OrderProvider } from './context/OrderContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -20,6 +21,13 @@ import './App.css';
 const AppContent = () => {
   const { user, loading, hasAccess } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
+
+  // Auto-redirect cashiers to orders page
+  useEffect(() => {
+    if (user && user.role === 'Cashier' && !window.location.hash) {
+      window.location.hash = '/orders';
+    }
+  }, [user]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -81,7 +89,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
       </AuthProvider>
     </ThemeProvider>
   );

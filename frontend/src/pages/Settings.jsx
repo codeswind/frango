@@ -1,8 +1,11 @@
 import { API_BASE_URL, API_BASE_PATH } from '../config';
 import React, { useState, useEffect } from 'react';
+import { useToast } from '../context/ToastContext';
+import Spinner from '../components/Spinner';
 import './Settings.css';
 
 const Settings = () => {
+  const toast = useToast();
   const [settings, setSettings] = useState({
     restaurant_name: 'My Restaurant',
     address: '123 Main Street, City, State',
@@ -37,9 +40,12 @@ const Settings = () => {
           print_kot: result.data.print_kot === '1' || result.data.print_kot === true,
           print_invoice: result.data.print_invoice === '1' || result.data.print_invoice === true
         });
+      } else {
+        toast.error('Failed to load settings: ' + result.message);
       }
     } catch (error) {
-      alert('Error loading settings. Please check your connection.');
+      console.error('Error loading settings:', error);
+      toast.error('Error loading settings. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -66,12 +72,13 @@ const Settings = () => {
       const result = await response.json();
 
       if (result.success) {
-        alert('Settings saved successfully!');
+        toast.success('Settings saved successfully!');
       } else {
-        alert('Failed to save settings: ' + result.message);
+        toast.error('Failed to save settings: ' + result.message);
       }
     } catch (error) {
-      alert('Error saving settings. Please try again.');
+      console.error('Error saving settings:', error);
+      toast.error('Error saving settings. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -119,17 +126,18 @@ const Settings = () => {
         } else {
           downloadFile(result.data, result.filename, 'application/sql');
         }
-        alert(`${type.toUpperCase()} backup downloaded successfully!`);
+        toast.success(`${type.toUpperCase()} backup downloaded successfully!`);
       } else {
-        alert('Failed to generate backup: ' + result.message);
+        toast.error('Failed to generate backup: ' + result.message);
       }
     } catch (error) {
-      alert('Error generating backup. Please try again.');
+      console.error('Error generating backup:', error);
+      toast.error('Error generating backup. Please try again.');
     }
   };
 
   const handleEmailBackup = () => {
-    alert('Email backup functionality will be implemented soon!');
+    toast.info('Email backup functionality will be implemented soon!');
   };
 
   if (loading) {
@@ -145,6 +153,7 @@ const Settings = () => {
 
   return (
     <div className="settings-page">
+      {(loading || saving) && <Spinner overlay={true} />}
       <h1>Settings</h1>
 
       <div className="settings-sections">

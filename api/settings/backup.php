@@ -1,22 +1,51 @@
 <?php
 include '../cors.php';
 include '../database.php';
+include '../auth.php';
+
+// Require authentication
+requireAuthWithTimeout();
+
+// Only Admin can create backups
+requireRole(PERM_MANAGE_SETTINGS);
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     $type = $input['type'] ?? 'csv'; // 'csv' or 'sql'
     $tables = $input['tables'] ?? ['all']; // specific tables or 'all'
 
+    // Validate backup type
+    $allowed_types = ['csv', 'sql'];
+    if (!in_array($type, $allowed_types)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid backup type. Allowed: csv, sql'
+        ]);
+        exit;
+    }
+
+    // Validate tables input is array
+    if (!is_array($tables)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid tables parameter'
+        ]);
+        exit;
+    }
+
     if ($type === 'csv') {
         generateCSVBackup($conn, $tables);
     } elseif ($type === 'sql') {
         generateSQLBackup($conn, $tables);
-    } else {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Invalid backup type'
-        ]);
     }
+} else {
+    http_response_code(405);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Invalid request method'
+    ]);
 }
 
 function generateCSVBackup($conn, $tables) {

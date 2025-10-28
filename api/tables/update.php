@@ -1,8 +1,15 @@
 <?php
 include '../cors.php';
 include '../database.php';
+include '../auth.php';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+// Require authentication
+requireAuthWithTimeout();
+
+// Only Admin can manage tables
+requireRole(PERM_MANAGE_SETTINGS);
+
+if ($_SERVER['REQUEST_METHOD') == 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
 
     if (!$input || !isset($input['id']) || !isset($input['table_name'])) {
@@ -13,14 +20,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     }
 
-    $id = (int)$input['id'];
+    $id = intval($input['id']);
     $table_name = trim($input['table_name']);
-    $status = isset($input['status']) ? $input['status'] : 'Available';
+    $status = isset($input['status']) ? trim($input['status']) : 'Available';
+
+    // Validate data
+    if ($id <= 0) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid table ID'
+        ]);
+        exit;
+    }
 
     if (empty($table_name)) {
         echo json_encode([
             'success' => false,
             'message' => 'Table name is required'
+        ]);
+        exit;
+    }
+
+    // Validate status - only allow specific values
+    $allowed_statuses = ['Available', 'Occupied'];
+    if (!in_array($status, $allowed_statuses)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid status. Must be Available or Occupied'
         ]);
         exit;
     }

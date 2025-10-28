@@ -13,8 +13,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     }
 
-    $id = (int)$input['id'];
-    $is_active = (int)$input['is_active'];
+    $id = intval($input['id']);
+    $is_active = intval($input['is_active']);
+
+    // Validate data
+    if ($id <= 0) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid table ID'
+        ]);
+        exit;
+    }
+
+    if ($is_active !== 0 && $is_active !== 1) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid status value. Must be 0 or 1'
+        ]);
+        exit;
+    }
 
     // First check if the table exists and get current values
     $check_sql = "SELECT id, table_name, is_active, is_deleted FROM tables WHERE id = ?";

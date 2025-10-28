@@ -1,12 +1,16 @@
 import { API_BASE_URL, API_BASE_PATH } from '../config';
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../api';
+import { useToast } from '../context/ToastContext';
+import Spinner from '../components/Spinner';
 import './UserManagement.css';
 
 const UserManagement = () => {
+  const toast = useToast();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [usernameFilter, setUsernameFilter] = useState('');
@@ -33,9 +37,12 @@ const UserManagement = () => {
       if (response.success) {
         setUsers(response.data);
         setFilteredUsers(response.data);
+      } else {
+        toast.error('Failed to load users: ' + response.message);
       }
     } catch (error) {
-      alert('Error loading users. Please check your connection.');
+      console.error('Error loading users:', error);
+      toast.error('Error loading users. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -112,12 +119,13 @@ const UserManagement = () => {
 
         if (result.success) {
           await fetchUsers(); // Refresh the users list
-          alert('User deleted successfully!');
+          toast.success('User deleted successfully!');
         } else {
-          alert('Failed to delete user: ' + result.message);
+          toast.error('Failed to delete user: ' + result.message);
         }
       } catch (error) {
-        alert('Error deleting user. Please try again.');
+        console.error('Error deleting user:', error);
+        toast.error('Error deleting user. Please try again.');
       }
     }
   };
@@ -126,11 +134,12 @@ const UserManagement = () => {
   const handleSubmitEdit = async (e) => {
     e.preventDefault();
     if (!formData.username.trim() || !formData.role.trim()) {
-      alert('Username and Role are required fields');
+      toast.error('Username and Role are required fields');
       return;
     }
 
     try {
+      setSubmitting(true);
       const response = await fetch(`${API_BASE}/update.php`, {
         method: 'POST',
         headers: {
@@ -150,12 +159,15 @@ const UserManagement = () => {
         setShowEditModal(false);
         setEditingUser(null);
         setFormData({ username: '', password: '', role: '' });
-        alert('User updated successfully!');
+        toast.success('User updated successfully!');
       } else {
-        alert('Failed to update user: ' + result.message);
+        toast.error('Failed to update user: ' + result.message);
       }
     } catch (error) {
-      alert('Error updating user. Please try again.');
+      console.error('Error updating user:', error);
+      toast.error('Error updating user. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -163,11 +175,12 @@ const UserManagement = () => {
   const handleSubmitAdd = async (e) => {
     e.preventDefault();
     if (!formData.username.trim() || !formData.password.trim() || !formData.role.trim()) {
-      alert('Username, Password, and Role are required fields');
+      toast.error('Username, Password, and Role are required fields');
       return;
     }
 
     try {
+      setSubmitting(true);
       const response = await fetch(`${API_BASE}/create.php`, {
         method: 'POST',
         headers: {
@@ -186,12 +199,15 @@ const UserManagement = () => {
         await fetchUsers(); // Refresh the users list
         setShowAddModal(false);
         setFormData({ username: '', password: '', role: '' });
-        alert('User added successfully!');
+        toast.success('User added successfully!');
       } else {
-        alert('Failed to add user: ' + result.message);
+        toast.error('Failed to add user: ' + result.message);
       }
     } catch (error) {
-      alert('Error adding user. Please try again.');
+      console.error('Error adding user:', error);
+      toast.error('Error adding user. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -219,6 +235,7 @@ const UserManagement = () => {
 
   return (
     <div className="user-management-page">
+      {(loading || submitting) && <Spinner overlay={true} />}
       <div className="page-header">
         <h1>User Management</h1>
         <button className="btn btn-primary" onClick={handleAddUser}>

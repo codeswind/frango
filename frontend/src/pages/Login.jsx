@@ -31,7 +31,11 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2>Restaurant POS</h2>
+        <div className="login-branding">
+          <div className="company-name">CodesWind</div>
+          <h2>WindPOS</h2>
+          <p className="tagline">for restaurants</p>
+        </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="username">Username</label>
@@ -67,6 +71,15 @@ const Login = () => {
           <p>Super Admin: superadmin / admin123</p>
           <p>Admin: admin / admin123</p>
           <p>Cashier: cashier / cashier123</p>
+        </div>
+        <div className="login-footer">
+          <div className="footer-company">
+            <strong>CodesWind</strong>
+          </div>
+          <div className="footer-contact">
+            <span>📱 0722440666</span>
+            <span>🌐 codeswind.cloud</span>
+          </div>
         </div>
       </div>
     </div>

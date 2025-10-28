@@ -1,16 +1,15 @@
 // ============================================
 // FRONTEND CONFIGURATION
 // ============================================
-// Change these values when deploying to production
+// Configuration is now loaded from .env file for better security
+// See .env.example for available variables
 
-// API Configuration
-export const API_BASE_URL = 'http://localhost/Afkar New/api';
-export const API_BASE_PATH = 'http://localhost/Afkar New';
+// API Configuration - Loaded from environment variables
+// Vite exposes env variables via import.meta.env
+// All custom variables must be prefixed with VITE_
 
-// For Production, change to:
-// export const API_BASE_URL = 'http://your-domain.com/api';
-// export const API_BASE_PATH = 'http://your-domain.com';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost/Afkar New/api';
+export const API_BASE_PATH = import.meta.env.VITE_API_BASE_PATH || 'http://localhost/Afkar New';
 
-// Or for remote server:
-// export const API_BASE_URL = 'http://192.168.1.100/Afkar New/api';
-// export const API_BASE_PATH = 'http://192.168.1.100/Afkar New';
+// Note: Fallback values are provided for development
+// In production, always use .env file

@@ -19,12 +19,41 @@
   border: 1px solid var(--color-card-border);
 }
 
-.login-card h2 {
+.login-branding {
   text-align: center;
-  margin-bottom: var(--spacing-3xl);
+  margin-bottom: var(--spacing-4xl);
+}
+
+.login-branding .company-name {
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.login-branding h2 {
+  margin: 0 0 var(--spacing-sm) 0;
   color: var(--color-text-primary);
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.05em;
+  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.login-branding .tagline {
+  margin: 0 0 var(--spacing-3xl) 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  font-style: italic;
 }
 
 .form-group {
@@ -154,6 +183,41 @@
   color: var(--color-text-primary);
 }
 
+.login-footer {
+  margin-top: var(--spacing-3xl);
+  padding-top: var(--spacing-3xl);
+  border-top: 1px solid var(--color-border-primary);
+  text-align: center;
+}
+
+.footer-company {
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.1em;
+}
+
+.footer-company strong {
+  color: var(--color-primary-600);
+  font-weight: var(--font-weight-bold);
+}
+
+.footer-contact {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-3xl);
+  flex-wrap: wrap;
+}
+
+.footer-contact span {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
 /* Responsive Design for Login */
 @media (max-width: 480px) {
   .login-container {
@@ -165,9 +229,16 @@
     margin: var(--spacing-lg);
   }
 
-  .login-card h2 {
-    font-size: var(--font-size-2xl);
-    margin-bottom: var(--spacing-2xl);
+  .login-branding {
+    margin-bottom: var(--spacing-3xl);
+  }
+
+  .login-branding h2 {
+    font-size: var(--font-size-3xl);
+  }
+
+  .login-branding .tagline {
+    font-size: 0.7rem;
   }
 
   .form-group {

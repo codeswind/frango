@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '../components/Modal';
 import api from '../api';
+import { useToast } from '../context/ToastContext';
+import Spinner from '../components/Spinner';
 import './OrderHistory.css';
 
 const OrderHistory = () => {
+  const toast = useToast();
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
@@ -13,6 +17,7 @@ const OrderHistory = () => {
   const [totalFilter, setTotalFilter] = useState('');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
+  const [globalSearch, setGlobalSearch] = useState('');
   const [activeTab, setActiveTab] = useState('All Orders');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -21,6 +26,24 @@ const OrderHistory = () => {
 
   const filterOrders = useCallback(() => {
     let filtered = orders;
+
+    // Global search filter (searches across Order ID, Customer Name/Mobile, Order Type)
+    if (globalSearch) {
+      const searchTerm = globalSearch.toLowerCase();
+      filtered = filtered.filter(order => {
+        const orderId = order.id.toString();
+        const customerName = (order.customer_name || '').toLowerCase();
+        const customerMobile = (order.customer_mobile || '');
+        const orderType = (order.order_type || '').toLowerCase();
+        const status = (order.status || '').toLowerCase();
+
+        return orderId.includes(searchTerm) ||
+               customerName.includes(searchTerm) ||
+               customerMobile.includes(searchTerm) ||
+               orderType.includes(searchTerm) ||
+               status.includes(searchTerm);
+      });
+    }
 
     // Filter by tab (order type)
     if (activeTab !== 'All Orders') {
@@ -84,7 +107,7 @@ const OrderHistory = () => {
     }
 
     setFilteredOrders(filtered);
-  }, [orders, statusFilter, fromDate, toDate, orderIdFilter, totalFilter, paymentMethodFilter, customerFilter, activeTab]);
+  }, [orders, statusFilter, fromDate, toDate, orderIdFilter, totalFilter, paymentMethodFilter, customerFilter, activeTab, globalSearch]);
 
   useEffect(() => {
     fetchOrders();
@@ -92,15 +115,22 @@ const OrderHistory = () => {
 
   useEffect(() => {
     filterOrders();
-  }, [orders, statusFilter, fromDate, toDate, orderIdFilter, totalFilter, paymentMethodFilter, customerFilter, activeTab, filterOrders]);
+  }, [orders, statusFilter, fromDate, toDate, orderIdFilter, totalFilter, paymentMethodFilter, customerFilter, activeTab, globalSearch, filterOrders]);
 
   const fetchOrders = async () => {
     try {
+      setLoading(true);
       const response = await api.getOrders();
       if (response.success) {
         setOrders(response.data);
+      } else {
+        toast.error('Error fetching orders: ' + response.message);
       }
     } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast.error('Error fetching orders');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -132,9 +162,12 @@ const OrderHistory = () => {
         };
         setSelectedOrder(orderWithItems);
         setShowOrderModal(true);
+      } else {
+        toast.error('Error loading order details: ' + response.message);
       }
     } catch (error) {
-      alert('Error loading order details');
+      console.error('Error loading order details:', error);
+      toast.error('Error loading order details');
     }
   };
 
@@ -170,11 +203,13 @@ const OrderHistory = () => {
             document.body.removeChild(iframe);
           }
         };
+        toast.success('Invoice sent to printer');
       } else {
-        alert('Failed to generate invoice: ' + invoiceResponse.message);
+        toast.error('Failed to generate invoice: ' + invoiceResponse.message);
       }
     } catch (error) {
-      alert('Error generating invoice');
+      console.error('Error generating invoice:', error);
+      toast.error('Error generating invoice');
     }
   };
 
@@ -182,7 +217,85 @@ const OrderHistory = () => {
 
   return (
     <div className="order-history-page">
+      {loading && <Spinner overlay={true} />}
       <h1>Order History</h1>
+
+      <div className="global-search-container" style={{
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px'
+      }}>
+        <div style={{position: 'relative', flex: 1, maxWidth: '400px'}}>
+          <span className="material-icons" style={{
+            position: 'absolute',
+            left: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--color-text-tertiary)',
+            fontSize: '20px'
+          }}>search</span>
+          <input
+            type="text"
+            placeholder="Quick search... (Order ID, Customer, Type, Status)"
+            value={globalSearch}
+            onChange={(e) => {
+              setGlobalSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 12px 10px 42px',
+              border: '2px solid var(--color-border-primary)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--font-size-sm)',
+              backgroundColor: 'var(--color-bg-primary)',
+              color: 'var(--color-text-primary)',
+              transition: 'all var(--transition-fast)',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--color-primary-500)';
+              e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'var(--color-border-primary)';
+              e.target.style.boxShadow = 'var(--shadow-sm)';
+            }}
+          />
+        </div>
+        {globalSearch && (
+          <button
+            onClick={() => setGlobalSearch('')}
+            style={{
+              padding: '10px 16px',
+              backgroundColor: 'var(--color-error-500)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer',
+              fontSize: 'var(--font-size-sm)',
+              fontWeight: 'var(--font-weight-medium)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all var(--transition-fast)',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = 'var(--color-error-600)';
+              e.target.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'var(--color-error-500)';
+              e.target.style.transform = 'translateY(0)';
+            }}
+          >
+            <span className="material-icons" style={{fontSize: '18px'}}>clear</span>
+            Clear
+          </button>
+        )}
+      </div>
 
       <div className="tabs">
         {tabs.map(tab => (
@@ -280,6 +393,7 @@ const OrderHistory = () => {
         <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '15px'}}>
           <button
             onClick={() => {
+              setGlobalSearch('');
               setOrderIdFilter('');
               setCustomerFilter('');
               setTotalFilter('');

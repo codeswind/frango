@@ -13,8 +13,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     }
 
-    $id = (int)$input['id'];
-    $is_deleted = (int)$input['is_deleted'];
+    $id = intval($input['id']);
+    $is_deleted = intval($input['is_deleted']);
+
+    // Validate data
+    if ($id <= 0) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid table ID'
+        ]);
+        exit;
+    }
+
+    if ($is_deleted !== 0 && $is_deleted !== 1) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid deletion value. Must be 0 or 1'
+        ]);
+        exit;
+    }
 
     $sql = "UPDATE tables SET is_deleted = ? WHERE id = ?";
     $stmt = $conn->prepare($sql);
